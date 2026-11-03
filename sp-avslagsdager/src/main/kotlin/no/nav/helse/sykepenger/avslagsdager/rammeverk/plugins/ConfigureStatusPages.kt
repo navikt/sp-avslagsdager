@@ -3,6 +3,7 @@ package no.nav.helse.sykepenger.avslagsdager.rammeverk.plugins
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
+import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.request.uri
 import io.ktor.server.response.respond
@@ -16,6 +17,18 @@ import no.nav.sykepenger.libs.logging.loggError
  */
 fun Application.configureStatusPages() {
     install(StatusPages) {
+        // Kastes av Ktor når requesten ikke kan leses, f.eks. en ukjent enum-verdi. Uten denne blir det 500.
+        exception<BadRequestException> { call, _ ->
+            call.respond(
+                HttpStatusCode.BadRequest,
+                ProblemDetails(
+                    title = "Ugyldig forespørsel",
+                    status = HttpStatusCode.BadRequest.value,
+                    detail = null,
+                    instance = call.request.uri,
+                ),
+            )
+        }
         exception<IllegalArgumentException> { call, cause ->
             call.respond(
                 HttpStatusCode.BadRequest,
