@@ -7,9 +7,7 @@ spec:
   egress:
     - to:
         - ipBlock:
-            # TODO: Sett inn public IP-en til Cloud SQL-instansen sp-avslagsdager etter første deploy av hovedappen.
-            # Slås opp med: kubectl get sqlinstance sp-avslagsdager -n tbd -o jsonpath='{.status.publicIpAddress}'
-            cidr: 0.0.0.0/32
+            cidr: 35.228.213.73/32
   podSelector:
     matchLabels:
       dbPolicyUser: sp-avslagsdager-opprydding-dev
