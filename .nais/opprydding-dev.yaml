@@ -51,7 +51,7 @@ spec:
     enabled: true
     path: /metrics
   envFrom:
-    - secret: google-sql-sp-avslagsdager-sp-avslagsdager-266bd975
+    - secret: google-sql-sp-avslagsdager-sp-avslagsdager-sp-avslagsd-86e248a9
   env:
     - name: KAFKA_RAPID_TOPIC
       value: tbd.rapid.v1
