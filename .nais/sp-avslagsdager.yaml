@@ -33,6 +33,7 @@ spec:
       memory: 512Mi
     limits:
       memory: 512Mi
+  leaderElection: true
   replicas:
     min: 1
     max: 1

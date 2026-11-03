@@ -1,12 +1,16 @@
 package no.nav.helse.sykepenger.avslagsdager.infra.rest
 
 import com.github.navikt.tbd_libs.personpseudoid.PersonPseudoId
+import no.nav.helse.sykepenger.avslagsdager.application.HandlingType
+import no.nav.helse.sykepenger.avslagsdager.application.OutboxKonvolutt
+import no.nav.helse.sykepenger.avslagsdager.application.OutboxMelding
 import no.nav.helse.sykepenger.avslagsdager.application.Transaksjonskontekst
 import no.nav.helse.sykepenger.avslagsdager.domain.Oppholdskravvurdering
 import no.nav.helse.sykepenger.avslagsdager.domain.OppholdskravvurderingResultat
 import no.nav.helse.sykepenger.avslagsdager.domain.SvarPåOppholdskrav
 import no.nav.helse.sykepenger.avslagsdager.domain.UgyldigOppholdskravvurdering
 import no.nav.helse.sykepenger.avslagsdager.domain.UnntakAndreLedd
+import no.nav.helse.sykepenger.avslagsdager.domain.tilPerioder
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.rest.KallKontekst
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.rest.PostBehandler
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.rest.RestResponse
@@ -16,6 +20,7 @@ import no.nav.sykepenger.libs.ktor.auth.Tilgang
  * Saksbehandlerens vurdering av oppholdskravet i § 8-9 for dager i en behandling.
  *
  * Både avslag og omgjøring til oppfylt lagres som en ny vurdering. Tidligere vurderinger endres ikke.
+ * Vurderingen og meldingene til spesialist og Spleis lagres i samme transaksjon og publiseres via outboxen.
  */
 internal class PostOppholdskravvurderingBehandler :
     PostBehandler<
@@ -59,11 +64,29 @@ internal class PostOppholdskravvurderingBehandler :
                 }
 
             kallKontekst.transaksjon.oppholdskravvurderinger.lagre(vurdering)
+            kallKontekst.transaksjon.outbox.leggTil(OutboxKonvolutt.ny(vurdering.tilSaksbehandlerhandling(), identitetsnummer))
+            kallKontekst.transaksjon.outbox.leggTil(OutboxKonvolutt.ny(vurdering.tilAvslagsdagerEndret(), identitetsnummer))
 
             RestResponse.ok(ApiOppholdskravvurderingResponse(vurderingId = vurdering.id.value))
         }
     }
 }
+
+private fun Oppholdskravvurdering.tilSaksbehandlerhandling() =
+    OutboxMelding.Saksbehandlerhandling(
+        saksbehandlerIdent = saksbehandlerIdent,
+        handlingId = id.value,
+        handlingType = HandlingType.AVSLAGSDAGER_ENDRET,
+        kreverTotrinnsvurdering = true,
+        tidspunkt = vurdertTidspunkt,
+        behandlingId = behandlingId,
+    )
+
+private fun Oppholdskravvurdering.tilAvslagsdagerEndret() =
+    OutboxMelding.AvslagsdagerEndret(
+        vurderingId = id.value,
+        perioder = dager.tilPerioder(),
+    )
 
 private fun ApiOppholdskravvurderingRequest.tilSvar() =
     SvarPåOppholdskrav(

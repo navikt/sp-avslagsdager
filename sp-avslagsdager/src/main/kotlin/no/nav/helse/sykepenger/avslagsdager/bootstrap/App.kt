@@ -15,7 +15,9 @@ import io.ktor.server.application.ApplicationStopped
 import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.helse.sykepenger.avslagsdager.application.Transaksjonskontekst
 import no.nav.helse.sykepenger.avslagsdager.infra.db.PostgresTransaksjonProvider
+import no.nav.helse.sykepenger.avslagsdager.infra.kafka.OutboxPubliseringsjobb
 import no.nav.helse.sykepenger.avslagsdager.infra.rest.PostOppholdskravvurderingBehandler
+import no.nav.helse.sykepenger.avslagsdager.leaderelection.NaisLeaderElection
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.openapi.OpenApiConfig
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.openapi.configureOpenApiPlugin
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.plugins.configureCallId
@@ -34,6 +36,7 @@ import no.nav.sykepenger.libs.logging.navngittLogger
 import no.nav.sykepenger.libs.postgres.DatabaseConfig
 import no.nav.sykepenger.libs.postgres.dataSource
 import no.nav.sykepenger.libs.postgres.migrerSynkront
+import kotlin.time.Duration.Companion.seconds
 
 private const val APP_NAVN = "sp-avslagsdager"
 
@@ -83,11 +86,12 @@ internal fun launchApplication(
     migrerSynkront(konfigurasjon.database)
     logger.info("Migrering ferdig")
     val dataSource = konfigurasjon.database.dataSource()
+    val transaksjonProvider = PostgresTransaksjonProvider(dataSource)
     val restAdapter =
         RestAdapter(
             personPseudoIdProvider = personPseudoIdProvider,
             populasjonstilgangskontrollProvider = tilgangskontroll,
-            transaksjonProvider = PostgresTransaksjonProvider(dataSource),
+            transaksjonProvider = transaksjonProvider,
         )
 
     RapidApplication
@@ -104,7 +108,22 @@ internal fun launchApplication(
                     }
                 }
             },
-        ).start()
+        ).apply {
+            val leaderElection =
+                NaisLeaderElection(
+                    electorSseUrl = env.getValue("ELECTOR_SSE_URL"),
+                    hostname = env.getValue("HOSTNAME"),
+                    ventetidFørNyTilkobling = 5.seconds,
+                )
+            register(leaderElection)
+            register(
+                OutboxPubliseringsjobb(
+                    rapidsConnection = this,
+                    transaksjonProvider = transaksjonProvider,
+                    leaderElection = leaderElection,
+                ),
+            )
+        }.start()
 }
 
 private fun Application.ktorApp(

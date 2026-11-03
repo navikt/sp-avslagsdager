@@ -67,6 +67,8 @@ internal class AppTest {
                             "AZURE_OPENID_CONFIG_JWKS_URI" to "http://localhost/azure/jwks",
                             "TILGANG_LES" to "les",
                             "TILGANG_SKRIV" to "skriv",
+                            "ELECTOR_SSE_URL" to "http://localhost:1/",
+                            "HOSTNAME" to "sp-avslagsdager-test",
                         ),
                 kafkaConfig = kafkaConfig,
                 personPseudoIdProvider = FakePersonProvider(),
