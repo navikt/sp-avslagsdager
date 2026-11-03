@@ -7,6 +7,7 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
 import kotliquery.TransactionalSession
+import kotliquery.queryOf
 import kotliquery.sessionOf
 import org.intellij.lang.annotations.Language
 import javax.sql.DataSource
@@ -39,12 +40,16 @@ internal class SlettPersonRiver(
         context.publish(fødselsnummer, lagPersonSlettet(fødselsnummer))
     }
 
-    @Suppress("UNUSED_PARAMETER")
     private fun slettPerson(
         tx: TransactionalSession,
         fødselsnummer: String,
     ) {
-        // TODO: Slett personens rader når appen får domenetabeller.
+        @Language("PostgreSQL")
+        val vurderinger = "SELECT id FROM oppholdskravvurdering WHERE fødselsnummer = :fodselsnummer"
+        val parametre = mapOf("fodselsnummer" to fødselsnummer)
+        tx.run(queryOf("DELETE FROM oppholdskravvurdering_dag WHERE vurdering_id IN ($vurderinger)", parametre).asUpdate)
+        tx.run(queryOf("DELETE FROM oppholdskravvurdering_vilkarsvurdering WHERE vurdering_id IN ($vurderinger)", parametre).asUpdate)
+        tx.run(queryOf("DELETE FROM oppholdskravvurdering WHERE fødselsnummer = :fodselsnummer", parametre).asUpdate)
     }
 
     @Language("JSON")

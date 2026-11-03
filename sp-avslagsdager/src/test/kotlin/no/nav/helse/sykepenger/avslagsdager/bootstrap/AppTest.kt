@@ -57,6 +57,7 @@ internal class AppTest {
                             "DB_POOL_SIZE" to "2",
                             "HTTP_PORT" to httpPort.toString(),
                             "NAIS_APP_NAME" to "sp-avslagsdager",
+                            "NAIS_CLUSTER_NAME" to "dev-gcp",
                             "RAPID_APP_NAME" to "sp-avslagsdager",
                             "KAFKA_CONSUMER_GROUP_ID" to "sp-avslagsdager-test",
                             "KAFKA_RAPID_TOPIC" to rapidTopic,
@@ -92,6 +93,24 @@ internal class AppTest {
                 )
             }
         assertTrue((antallVellykkedeMigreringer ?: 0) > 0)
+    }
+
+    @Test
+    fun `vurdering av oppholdskravet uten token gir 401`() {
+        // When
+        val statuskode =
+            httpClient
+                .send(
+                    HttpRequest
+                        .newBuilder(URI("http://localhost:$httpPort/api/personer/${UUID.randomUUID()}/vurderinger/oppholdskrav"))
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString("{}"))
+                        .build(),
+                    HttpResponse.BodyHandlers.discarding(),
+                ).statusCode()
+
+        // Then
+        assertEquals(401, statuskode)
     }
 
     @Test

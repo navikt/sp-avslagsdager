@@ -15,7 +15,8 @@ internal class PostgresTransaksjonProvider(
         }
 }
 
-@Suppress("UNUSED_PARAMETER")
 private class PostgresTransaksjonskontekst(
     session: Session,
-) : Transaksjonskontekst
+) : Transaksjonskontekst {
+    override val oppholdskravvurderinger = PostgresOppholdskravvurderingRepository(session)
+}

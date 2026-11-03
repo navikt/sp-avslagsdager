@@ -15,6 +15,7 @@ import io.ktor.server.application.ApplicationStopped
 import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.helse.sykepenger.avslagsdager.application.Transaksjonskontekst
 import no.nav.helse.sykepenger.avslagsdager.infra.db.PostgresTransaksjonProvider
+import no.nav.helse.sykepenger.avslagsdager.infra.rest.PostOppholdskravvurderingBehandler
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.openapi.OpenApiConfig
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.openapi.configureOpenApiPlugin
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.plugins.configureCallId
@@ -44,6 +45,7 @@ internal data class AppKonfigurasjon(
     val database: DatabaseConfig,
     val tilganger: TilgangsgrupperTilTilganger,
     val openApi: OpenApiConfig,
+    val oppholdskravvurderingAktivert: Boolean,
 ) {
     companion object {
         fun fraEnv(
@@ -55,6 +57,7 @@ internal data class AppKonfigurasjon(
             database = DatabaseConfig.fraEnv(env),
             tilganger = TilgangsgrupperTilTilganger.fraEnv(env),
             openApi = OpenApiConfig.fraEnv(appNavn, env),
+            oppholdskravvurderingAktivert = oppholdskravvurderingAktivert(env),
         )
     }
 }
@@ -118,11 +121,16 @@ private fun Application.ktorApp(
         tilgangsgrupperTilTilganger = konfigurasjon.tilganger,
     )
     configureOpenApiPlugin(konfigurasjon.openApi)
-    configureRestRuting(restAdapter, endepunkter())
+    configureRestRuting(restAdapter, endepunkter(konfigurasjon.oppholdskravvurderingAktivert))
     monitor.subscribe(ApplicationStarted) {
         loggInfo("Ktor-applikasjon startet", "appNavn" to konfigurasjon.appNavn)
     }
 }
 
-// Appens HTTP-endepunkter. Tom til appen får et domene.
-internal fun endepunkter(): RestRuting<Transaksjonskontekst>.() -> Unit = {}
+internal fun endepunkter(oppholdskravvurderingAktivert: Boolean): RestRuting<Transaksjonskontekst>.() -> Unit =
+    {
+        if (oppholdskravvurderingAktivert) post(PostOppholdskravvurderingBehandler())
+    }
+
+// Bare i dev inntil avslag etter oppholdskravet er klart for prod. Ukjent miljø gir av.
+internal fun oppholdskravvurderingAktivert(env: Map<String, String>) = env["NAIS_CLUSTER_NAME"] == "dev-gcp"
