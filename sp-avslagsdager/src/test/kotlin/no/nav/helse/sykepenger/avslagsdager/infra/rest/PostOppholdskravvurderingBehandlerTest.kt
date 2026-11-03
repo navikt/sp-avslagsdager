@@ -26,6 +26,7 @@ import no.nav.helse.sykepenger.avslagsdager.infra.kafka.OutboxPubliseringsjobb
 import no.nav.helse.sykepenger.avslagsdager.leaderelection.LeaderElection
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.plugins.configureContentNegotiation
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.plugins.configureResources
+import no.nav.helse.sykepenger.avslagsdager.rammeverk.plugins.configureStatusPages
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.rest.RestAdapter
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.rest.post
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.testfixtures.InMemoryPersonPseudoIdProvider
@@ -159,6 +160,21 @@ class PostOppholdskravvurderingBehandlerTest {
         }
 
     @Test
+    fun `kall når vurdering av oppholdskravet ikke er skrudd på gir 500 og lagrer ingenting`() =
+        testApplication {
+            // Given
+            val pseudoId = settOpp(aktivert = false)
+
+            // When
+            val response = client.post(url(pseudoId)) { json(request()) }
+
+            // Then
+            assertEquals(HttpStatusCode.InternalServerError, response.status)
+            assertEquals(emptyList<Any>(), transaksjonProvider.oppholdskravvurderinger.alle)
+            assertEquals(emptyList<Any>(), transaksjonProvider.outbox.upubliserteMeldinger)
+        }
+
+    @Test
     fun `tomme dager gir 400`() = assertUgyldig(request(dager = "[]"), "Dager må oppgis")
 
     @Test
@@ -256,12 +272,14 @@ class PostOppholdskravvurderingBehandlerTest {
     private fun ApplicationTestBuilder.settOpp(
         tilganger: Set<Tilgang> = setOf(Tilgang.Les, Tilgang.Skriv),
         tilgangskontroll: PopulasjonstilgangskontrollProvider = FakeTilgangskontroll(),
+        aktivert: Boolean = true,
     ): String {
         val pseudoIdProvider = InMemoryPersonPseudoIdProvider()
         val pseudoId = pseudoIdProvider.nyPersonPseudoId(identitetsnummer)
         application {
             configureContentNegotiation()
             configureResources()
+            configureStatusPages()
             val principal = SaksbehandlerPrincipal(saksbehandler, tilganger, AccessToken("token"))
             intercept(ApplicationCallPipeline.Plugins) {
                 call.authentication.principal(principal)
@@ -273,7 +291,7 @@ class PostOppholdskravvurderingBehandlerTest {
                     transaksjonProvider = transaksjonProvider,
                 )
             routing {
-                post(PostOppholdskravvurderingBehandler(), restAdapter)
+                post(PostOppholdskravvurderingBehandler(aktivert), restAdapter)
             }
         }
         return pseudoId.toString()

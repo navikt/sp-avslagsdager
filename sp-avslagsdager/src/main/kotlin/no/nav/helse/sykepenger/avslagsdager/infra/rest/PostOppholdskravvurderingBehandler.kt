@@ -22,8 +22,9 @@ import no.nav.sykepenger.libs.ktor.auth.Tilgang
  * Både avslag og omgjøring til oppfylt lagres som en ny vurdering. Tidligere vurderinger endres ikke.
  * Vurderingen og meldingene til spesialist og Spleis lagres i samme transaksjon og publiseres via outboxen.
  */
-internal class PostOppholdskravvurderingBehandler :
-    PostBehandler<
+internal class PostOppholdskravvurderingBehandler(
+    private val aktivert: Boolean,
+) : PostBehandler<
         ApiOppholdskravvurderingResource,
         ApiOppholdskravvurderingRequest,
         ApiOppholdskravvurderingResponse,
@@ -38,6 +39,8 @@ internal class PostOppholdskravvurderingBehandler :
         request: ApiOppholdskravvurderingRequest,
         kallKontekst: KallKontekst<Transaksjonskontekst>,
     ): RestResponse<ApiOppholdskravvurderingResponse, ApiOppholdskravvurderingFeil> {
+        check(aktivert) { "Vurdering av oppholdskravet er ikke skrudd på" }
+
         val personPseudoId =
             PersonPseudoId.fraString(resource.personId)
                 ?: return RestResponse.feil(ApiOppholdskravvurderingFeil.PersonIkkeFunnet)

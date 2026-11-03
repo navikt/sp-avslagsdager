@@ -16,6 +16,7 @@ import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.helse.sykepenger.avslagsdager.application.Transaksjonskontekst
 import no.nav.helse.sykepenger.avslagsdager.infra.db.PostgresTransaksjonProvider
 import no.nav.helse.sykepenger.avslagsdager.infra.kafka.OutboxPubliseringsjobb
+import no.nav.helse.sykepenger.avslagsdager.infra.rest.GetSaksbehandlerhandlingVisningBehandler
 import no.nav.helse.sykepenger.avslagsdager.infra.rest.PostOppholdskravvurderingBehandler
 import no.nav.helse.sykepenger.avslagsdager.leaderelection.NaisLeaderElection
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.openapi.OpenApiConfig
@@ -148,8 +149,10 @@ private fun Application.ktorApp(
 
 internal fun endepunkter(oppholdskravvurderingAktivert: Boolean): RestRuting<Transaksjonskontekst>.() -> Unit =
     {
-        if (oppholdskravvurderingAktivert) post(PostOppholdskravvurderingBehandler())
+        post(PostOppholdskravvurderingBehandler(aktivert = oppholdskravvurderingAktivert))
+        get(GetSaksbehandlerhandlingVisningBehandler(aktivert = oppholdskravvurderingAktivert))
     }
 
-// Bare i dev inntil avslag etter oppholdskravet er klart for prod. Ukjent miljø gir av.
+// Bare i dev inntil avslag etter oppholdskravet er klart for prod. Ukjent miljø gir av. Endepunktene finnes i alle
+// miljøer, men kaster når sperren er på, så et kall i prod blir en tydelig feil i stedet for en ny feilkode i API-et.
 internal fun oppholdskravvurderingAktivert(env: Map<String, String>) = env["NAIS_CLUSTER_NAME"] == "dev-gcp"

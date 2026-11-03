@@ -2,6 +2,7 @@ package no.nav.helse.sykepenger.avslagsdager.bootstrap
 
 import com.github.navikt.tbd_libs.populasjonstilgang.api.PopulasjonstilgangskontrollProvider
 import com.github.navikt.tbd_libs.populasjonstilgang.api.TilgangskontrollResultat
+import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
@@ -31,29 +32,33 @@ class EndepunkterTest {
     }
 
     @Test
-    fun `endepunktet finnes ikke når vurdering av oppholdskravet er av`() =
+    fun `endepunktene finnes og krever token også når vurdering av oppholdskravet er av`() =
         testApplication {
             // Given
             application { settOpp(oppholdskravvurderingAktivert = false) }
 
             // When
-            val response = client.post(url())
+            val vurdering = client.post(url())
+            val visning = client.get(visningUrl())
 
             // Then
-            assertEquals(HttpStatusCode.NotFound, response.status)
+            assertEquals(HttpStatusCode.Unauthorized, vurdering.status)
+            assertEquals(HttpStatusCode.Unauthorized, visning.status)
         }
 
     @Test
-    fun `endepunktet finnes og krever token når vurdering av oppholdskravet er på`() =
+    fun `endepunktene finnes og krever token når vurdering av oppholdskravet er på`() =
         testApplication {
             // Given
             application { settOpp(oppholdskravvurderingAktivert = true) }
 
             // When
-            val response = client.post(url())
+            val vurdering = client.post(url())
+            val visning = client.get(visningUrl())
 
             // Then
-            assertEquals(HttpStatusCode.Unauthorized, response.status)
+            assertEquals(HttpStatusCode.Unauthorized, vurdering.status)
+            assertEquals(HttpStatusCode.Unauthorized, visning.status)
         }
 
     private fun Application.settOpp(oppholdskravvurderingAktivert: Boolean) {
@@ -79,6 +84,8 @@ class EndepunkterTest {
     }
 
     private fun url() = "/api/personer/${UUID.randomUUID()}/vurderinger/oppholdskrav"
+
+    private fun visningUrl() = "/api/personer/${UUID.randomUUID()}/saksbehandlerhandlinger/${UUID.randomUUID()}/visning"
 
     private object ÅpenTilgangskontroll : PopulasjonstilgangskontrollProvider {
         override fun kontrollerKomplettTilgang(

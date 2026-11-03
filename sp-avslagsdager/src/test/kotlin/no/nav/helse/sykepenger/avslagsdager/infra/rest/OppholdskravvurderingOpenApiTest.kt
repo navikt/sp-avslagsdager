@@ -15,6 +15,7 @@ import no.nav.helse.sykepenger.avslagsdager.rammeverk.openapi.configureOpenApiPl
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.plugins.configureContentNegotiation
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.plugins.configureResources
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.rest.RestAdapter
+import no.nav.helse.sykepenger.avslagsdager.rammeverk.rest.get
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.rest.post
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.testfixtures.InMemoryPersonPseudoIdProvider
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -24,7 +25,7 @@ import tools.jackson.module.kotlin.jacksonObjectMapper
 
 class OppholdskravvurderingOpenApiTest {
     @Test
-    fun `openapi-specen dokumenterer endepunktet, requesten og responsen`() =
+    fun `openapi-specen dokumenterer endepunktene, requesten og responsene`() =
         testApplication {
             // Given
             application { settOppTestapp() }
@@ -55,6 +56,17 @@ class OppholdskravvurderingOpenApiTest {
 
             val responsen = spec["components"]["schemas"]["ApiOppholdskravvurderingResponse"]["properties"]
             assertTrue(responsen.has("vurderingId")) { "Forventet vurderingId i responsen: $responsen" }
+
+            assertTrue(spec["paths"].has("/api/personer/{personId}/saksbehandlerhandlinger/{handlingId}/visning")) {
+                "Forventet at visningen var dokumentert: $spec"
+            }
+            val visning = spec["components"]["schemas"]["ApiSaksbehandlerhandlingVisningResponse"]["properties"]
+            assertTrue(visning.has("felter")) { "Forventet felter i visningen: $visning" }
+            listOf("ApiVisningsfelt.Tekst", "ApiVisningsfelt.Liste").forEach { skjema ->
+                assertTrue(spec["components"]["schemas"][skjema]?.get("properties")?.has("type") == true) {
+                    "Forventet diskriminatoren type i skjemaet $skjema: ${spec["components"]["schemas"][skjema]}"
+                }
+            }
         }
 
     private fun Application.settOppTestapp() {
@@ -84,7 +96,8 @@ class OppholdskravvurderingOpenApiTest {
             )
         configureOpenApiPlugin(OpenApiConfig(eksponerOpenApi = true, tittel = "sp-avslagsdager"))
         routing {
-            post(PostOppholdskravvurderingBehandler(), restAdapter)
+            post(PostOppholdskravvurderingBehandler(aktivert = true), restAdapter)
+            get(GetSaksbehandlerhandlingVisningBehandler(aktivert = true), restAdapter)
         }
     }
 }
