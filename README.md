@@ -1,6 +1,6 @@
 # sp-avslagsdager
 
-Domeneapp for avslagsdager i sykepenger. Appen er foreløpig et skjelett uten domene: den har rapid, database, REST-oppsett for Speil og en klient mot spleis-api, men ingen rivers, tabeller eller endepunkter ennå.
+Domeneapp for avslagsdager i sykepenger. Appen er foreløpig et skjelett uten domene: den har rapid, database, REST-oppsett for Speil og en klient mot spleis-api.
 
 ## REST-API
 
