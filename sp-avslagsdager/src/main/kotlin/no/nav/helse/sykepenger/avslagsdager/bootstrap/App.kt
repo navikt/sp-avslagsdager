@@ -15,6 +15,7 @@ import io.ktor.server.application.ApplicationStopped
 import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.helse.sykepenger.avslagsdager.application.Transaksjonskontekst
 import no.nav.helse.sykepenger.avslagsdager.infra.db.PostgresTransaksjonProvider
+import no.nav.helse.sykepenger.avslagsdager.infra.kafka.AvslagsdagerRiver
 import no.nav.helse.sykepenger.avslagsdager.infra.kafka.OutboxPubliseringsjobb
 import no.nav.helse.sykepenger.avslagsdager.infra.rest.GetSaksbehandlerhandlingVisningBehandler
 import no.nav.helse.sykepenger.avslagsdager.infra.rest.PostOppholdskravvurderingBehandler
@@ -124,6 +125,7 @@ internal fun launchApplication(
                     leaderElection = leaderElection,
                 ),
             )
+            AvslagsdagerRiver(this, transaksjonProvider)
         }.start()
 }
 
