@@ -9,6 +9,8 @@ internal data class Periode(
     init {
         require(!tom.isBefore(fom)) { "tom ($tom) kan ikke være før fom ($fom)" }
     }
+
+    operator fun contains(dato: LocalDate) = !dato.isBefore(fom) && !dato.isAfter(tom)
 }
 
 /** Grupperer dagene til sammenhengende kalenderperioder. Helg og helligdager bryter ikke en periode. */

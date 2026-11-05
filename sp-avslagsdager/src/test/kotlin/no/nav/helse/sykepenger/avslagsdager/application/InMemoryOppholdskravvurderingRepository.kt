@@ -2,6 +2,7 @@ package no.nav.helse.sykepenger.avslagsdager.application
 
 import no.nav.helse.sykepenger.avslagsdager.domain.Oppholdskravvurdering
 import no.nav.helse.sykepenger.avslagsdager.domain.OppholdskravvurderingId
+import no.nav.helse.sykepenger.avslagsdager.domain.Periode
 
 internal class InMemoryOppholdskravvurderingRepository : OppholdskravvurderingRepository {
     private val vurderinger = mutableListOf<Oppholdskravvurdering>()
@@ -14,4 +15,9 @@ internal class InMemoryOppholdskravvurderingRepository : OppholdskravvurderingRe
     }
 
     override fun finn(id: OppholdskravvurderingId) = vurderinger.find { it.id == id }
+
+    override fun finnForPeriode(
+        fødselsnummer: String,
+        periode: Periode,
+    ) = vurderinger.filter { vurdering -> vurdering.fødselsnummer == fødselsnummer && vurdering.dager.any { it in periode } }
 }

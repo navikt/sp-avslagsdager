@@ -7,6 +7,7 @@ import no.nav.helse.sykepenger.avslagsdager.application.OppholdskravvurderingRep
 import no.nav.helse.sykepenger.avslagsdager.domain.Lovreferanse
 import no.nav.helse.sykepenger.avslagsdager.domain.Oppholdskravvurdering
 import no.nav.helse.sykepenger.avslagsdager.domain.OppholdskravvurderingId
+import no.nav.helse.sykepenger.avslagsdager.domain.Periode
 import no.nav.helse.sykepenger.avslagsdager.domain.SvarPåOppholdskrav
 import no.nav.helse.sykepenger.avslagsdager.domain.UnntakAndreLedd
 import no.nav.helse.sykepenger.avslagsdager.domain.Utfall
@@ -70,6 +71,18 @@ internal class PostgresOppholdskravvurderingRepository(
         )
     }
 
+    override fun finnForPeriode(
+        fødselsnummer: String,
+        periode: Periode,
+    ): List<Oppholdskravvurdering> =
+        session
+            .run(
+                queryOf(
+                    SELECT_VURDERINGER_I_PERIODE,
+                    mapOf("fodselsnummer" to fødselsnummer, "fom" to periode.fom, "tom" to periode.tom),
+                ).map { OppholdskravvurderingId(it.uuid("id")) }.asList,
+            ).map { id -> checkNotNull(finn(id)) }
+
     private fun lagreVurdering(vurdering: Oppholdskravvurdering) {
         session.run(
             queryOf(
@@ -129,6 +142,14 @@ internal class PostgresOppholdskravvurderingRepository(
                    vurdert_tidspunkt
             from oppholdskravvurdering
             where id = :id
+        """
+
+        @Language("PostgreSQL")
+        const val SELECT_VURDERINGER_I_PERIODE = """
+            select distinct v.id
+            from oppholdskravvurdering v
+            join oppholdskravvurdering_dag d on d.vurdering_id = v.id
+            where v.fødselsnummer = :fodselsnummer and d.dato between :fom and :tom
         """
 
         @Language("PostgreSQL")

@@ -267,7 +267,7 @@ internal class OppholdskravvurderingTest {
             )
 
         // When
-        val avslagsdager = vurdering.avslagsdager()
+        val avslagsdager = vurdering.dager.mapNotNull(vurdering::avslagsdag)
 
         // Then
         val vilkårskoder =
@@ -293,7 +293,7 @@ internal class OppholdskravvurderingTest {
             vurdert(svar(eøsBorger = true, oppholdIGodkjentOmråde = false, unntakAndreLedd = MEDLEM_ETTER_2_5_2_6_2_8))
 
         // When / Then
-        assertEquals(emptyList<Avslagsdag>(), vurdering.avslagsdager())
+        assertEquals(emptyList<Avslagsdag>(), vurdering.dager.mapNotNull(vurdering::avslagsdag))
     }
 
     private fun Oppholdskravvurdering.koderOgUtfall() = vilkårsvurderinger.map { it.vilkårskode to it.utfall }

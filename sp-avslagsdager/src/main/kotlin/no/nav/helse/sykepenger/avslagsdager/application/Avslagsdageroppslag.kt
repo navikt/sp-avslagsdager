@@ -2,29 +2,26 @@ package no.nav.helse.sykepenger.avslagsdager.application
 
 import no.nav.helse.sykepenger.avslagsdager.domain.Avslagsdag
 import no.nav.helse.sykepenger.avslagsdager.domain.OppholdskravvurderingId
-
-internal sealed interface AvslagsdagerResultat {
-    data class Funnet(
-        val avslagsdager: List<Avslagsdag>,
-    ) : AvslagsdagerResultat
-
-    /** Vurderinger som ikke finnes, eller som gjelder en annen person. De to tilfellene skilles ikke. */
-    data class UkjenteVurderinger(
-        val vurderingIder: List<OppholdskravvurderingId>,
-    ) : AvslagsdagerResultat
-}
+import no.nav.helse.sykepenger.avslagsdager.domain.Periode
+import no.nav.helse.sykepenger.avslagsdager.domain.gjeldendePerDag
 
 /**
- * Avslagsdagene i vurderingene, i rekkefølgen ID-ene er gitt. Spleis avgjør selv hvilken vurdering som gjelder for
- * hver dag (ADR 0005). Er én av vurderingene ukjent for personen, gis ingen avslagsdager, så Spleis aldri bygger på et
- * delvis svar.
+ * [vurderingIder] er vurderingene som gjelder for minst én dag i perioden, også oppfylte, i rekkefølgen de først
+ * gjelder. [avslagsdager] er dagene der den gjeldende vurderingen ikke er oppfylt, sortert på dato.
  */
+internal data class Avslagsdagerløsning(
+    val vurderingIder: List<OppholdskravvurderingId>,
+    val avslagsdager: List<Avslagsdag>,
+)
+
+/** Spleis spør med beregningsperioden og lagrer ID-ene fra løsningen på endringen (ADR 0005). */
 internal fun OppholdskravvurderingRepository.avslagsdager(
     fødselsnummer: String,
-    vurderingIder: List<OppholdskravvurderingId>,
-): AvslagsdagerResultat {
-    val vurderinger = vurderingIder.distinct().associateWith { id -> finn(id)?.takeIf { it.fødselsnummer == fødselsnummer } }
-    val ukjente = vurderinger.filterValues { it == null }.keys
-    if (ukjente.isNotEmpty()) return AvslagsdagerResultat.UkjenteVurderinger(ukjente.toList())
-    return AvslagsdagerResultat.Funnet(vurderinger.values.filterNotNull().flatMap { it.avslagsdager() })
+    periode: Periode,
+): Avslagsdagerløsning {
+    val gjeldende = finnForPeriode(fødselsnummer, periode).gjeldendePerDag(periode)
+    return Avslagsdagerløsning(
+        vurderingIder = gjeldende.values.map { it.id }.distinct(),
+        avslagsdager = gjeldende.mapNotNull { (dag, vurdering) -> vurdering.avslagsdag(dag) },
+    )
 }
