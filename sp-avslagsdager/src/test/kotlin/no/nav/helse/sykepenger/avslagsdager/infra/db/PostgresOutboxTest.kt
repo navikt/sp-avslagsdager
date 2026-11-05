@@ -109,7 +109,7 @@ internal class PostgresOutboxTest : DatabaseTest() {
         OutboxMelding.Saksbehandlerhandling(
             saksbehandlerIdent = "Z999999",
             handlingId = UUID.randomUUID(),
-            handlingType = HandlingType.AVSLAGSDAGER_ENDRET,
+            handlingType = HandlingType.MANUELT_VURDERT_OPPHOLDSKRAV,
             kreverTotrinnsvurdering = true,
             tidspunkt = Instant.parse("2026-01-10T12:00:00Z"),
             behandlingId = UUID.randomUUID(),

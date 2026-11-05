@@ -117,7 +117,7 @@ class PostOppholdskravvurderingBehandlerTest {
             assertEquals(identitetsnummer.value, handling["fødselsnummer"].asString())
             assertEquals("Z999999", handling["saksbehandlerIdent"].asString())
             assertEquals(vurderingId, handling["handlingId"].asString())
-            assertEquals("AVSLAGSDAGER_ENDRET", handling["handlingType"].asString())
+            assertEquals("MANUELT_VURDERT_OPPHOLDSKRAV", handling["handlingType"].asString())
             assertTrue(handling["kreverTotrinnsvurdering"].asBoolean())
             assertTrue(handling.hasNonNull("tidspunkt"))
             assertEquals(behandlingId.toString(), handling["behandlingId"].asString())

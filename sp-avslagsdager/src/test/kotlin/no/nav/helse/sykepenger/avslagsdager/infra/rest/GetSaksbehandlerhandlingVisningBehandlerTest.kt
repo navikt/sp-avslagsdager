@@ -44,7 +44,7 @@ class GetSaksbehandlerhandlingVisningBehandlerTest {
     private val transaksjonProvider = InMemoryTransaksjonProvider()
 
     @Test
-    fun `avslag vises med perioder, utfall, vilkårsvurderinger, begrunnelse og journalposter`() =
+    fun `avslag vises med utfall, svarene, perioder, journalposter og begrunnelse`() =
         testApplication {
             // Given
             val vurdering =
@@ -64,20 +64,14 @@ class GetSaksbehandlerhandlingVisningBehandlerTest {
                 """
                 {
                   "felter": [
+                    { "type": "TEKST", "tittel": "Oppholdskrav", "tekst": "Ikke oppfylt" },
+                    { "type": "TEKST", "tittel": "EØS-borger", "tekst": "Ja" },
+                    { "type": "TEKST", "tittel": "Opphold i Norge, EØS eller avtaleland", "tekst": "Nei" },
+                    { "type": "TEKST", "tittel": "Unntak i andre ledd", "tekst": "Nei" },
+                    { "type": "TEKST", "tittel": "Godkjent opphold utenfor Norge i inntil fire uker", "tekst": "Nei" },
                     { "type": "LISTE", "tittel": "Dager", "elementer": ["01.01.2026–03.01.2026", "10.01.2026"] },
-                    { "type": "TEKST", "tittel": "Utfall", "tekst": "Ikke oppfylt" },
-                    {
-                      "type": "LISTE",
-                      "tittel": "Vilkår",
-                      "elementer": [
-                        "§ 8-9 første ledd første setning: Ikke oppfylt",
-                        "§ 8-9 andre ledd bokstav a: Ikke oppfylt",
-                        "§ 8-9 andre ledd bokstav b: Ikke oppfylt",
-                        "§ 8-9 tredje ledd: Ikke oppfylt"
-                      ]
-                    },
-                    { "type": "TEKST", "tittel": "Begrunnelse", "tekst": "Oppholdt seg i Thailand" },
-                    { "type": "LISTE", "tittel": "Journalposter", "elementer": ["123", "456"] }
+                    { "type": "LISTE", "tittel": "Journalposter", "elementer": ["123", "456"] },
+                    { "type": "TEKST", "tittel": "Begrunnelse", "tekst": "Oppholdt seg i Thailand" }
                   ]
                 }
                 """,
@@ -106,16 +100,43 @@ class GetSaksbehandlerhandlingVisningBehandlerTest {
                 """
                 {
                   "felter": [
+                    { "type": "TEKST", "tittel": "Oppholdskrav", "tekst": "Oppfylt" },
+                    { "type": "TEKST", "tittel": "EØS-borger", "tekst": "Nei" },
+                    { "type": "TEKST", "tittel": "Opphold i Norge", "tekst": "Nei" },
+                    { "type": "TEKST", "tittel": "Unntak i andre ledd", "tekst": "Innlagt i helseinstitusjon" },
                     { "type": "LISTE", "tittel": "Dager", "elementer": ["01.01.2026"] },
-                    { "type": "TEKST", "tittel": "Utfall", "tekst": "Oppfylt" },
-                    {
-                      "type": "LISTE",
-                      "tittel": "Vilkår",
-                      "elementer": [
-                        "§ 8-9 første ledd andre setning: Ikke oppfylt",
-                        "§ 8-9 andre ledd bokstav b: Oppfylt"
-                      ]
-                    },
+                    { "type": "TEKST", "tittel": "Begrunnelse", "tekst": "Oppholdt seg i Thailand" }
+                  ]
+                }
+                """,
+                response.bodyAsText(),
+            )
+        }
+
+    @Test
+    fun `oppfylt første ledd vises uten spørsmålene om unntak`() =
+        testApplication {
+            // Given
+            val vurdering =
+                lagreVurdering(
+                    svar = SvarPåOppholdskrav(eøsBorger = true, oppholdIGodkjentOmråde = true, unntakAndreLedd = UnntakAndreLedd.INGEN, godkjentOppholdInntilFireUker = false),
+                    journalpostId = emptyList(),
+                )
+            val pseudoId = settOpp()
+
+            // When
+            val response = client.get(url(pseudoId, vurdering.id.toString()))
+
+            // Then
+            assertEquals(HttpStatusCode.OK, response.status)
+            assertJson(
+                """
+                {
+                  "felter": [
+                    { "type": "TEKST", "tittel": "Oppholdskrav", "tekst": "Oppfylt" },
+                    { "type": "TEKST", "tittel": "EØS-borger", "tekst": "Ja" },
+                    { "type": "TEKST", "tittel": "Opphold i Norge, EØS eller avtaleland", "tekst": "Ja" },
+                    { "type": "LISTE", "tittel": "Dager", "elementer": ["01.01.2026"] },
                     { "type": "TEKST", "tittel": "Begrunnelse", "tekst": "Oppholdt seg i Thailand" }
                   ]
                 }

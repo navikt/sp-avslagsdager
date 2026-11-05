@@ -2,12 +2,11 @@ package no.nav.helse.sykepenger.avslagsdager.infra.rest
 
 import com.github.navikt.tbd_libs.personpseudoid.PersonPseudoId
 import no.nav.helse.sykepenger.avslagsdager.application.Transaksjonskontekst
-import no.nav.helse.sykepenger.avslagsdager.domain.Lovreferanse
 import no.nav.helse.sykepenger.avslagsdager.domain.Oppholdskravvurdering
 import no.nav.helse.sykepenger.avslagsdager.domain.OppholdskravvurderingId
 import no.nav.helse.sykepenger.avslagsdager.domain.Periode
+import no.nav.helse.sykepenger.avslagsdager.domain.UnntakAndreLedd
 import no.nav.helse.sykepenger.avslagsdager.domain.Utfall
-import no.nav.helse.sykepenger.avslagsdager.domain.Vilkårsvurdering
 import no.nav.helse.sykepenger.avslagsdager.domain.tilPerioder
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.rest.GetBehandler
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.rest.KallKontekst
@@ -17,7 +16,7 @@ import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 /**
- * Detaljene i en saksbehandlerhandling av typen `AVSLAGSDAGER_ENDRET`. Handlings-ID-en er vurderings-ID-en.
+ * Detaljene i en saksbehandlerhandling av typen `MANUELT_VURDERT_OPPHOLDSKRAV`. Handlings-ID-en er vurderings-ID-en.
  */
 internal class GetSaksbehandlerhandlingVisningBehandler(
     private val aktivert: Boolean,
@@ -63,15 +62,22 @@ internal class GetSaksbehandlerhandlingVisningBehandler(
     }
 }
 
+// Feltene kommer i samme rekkefølge som spørsmålene i skjemaet. Svar på spørsmål som ikke ble stilt, er fjernet ved lagring.
 private fun Oppholdskravvurdering.tilVisningsfelter(): List<ApiVisningsfelt> =
     buildList {
+        add(ApiVisningsfelt.Tekst(tittel = "Oppholdskrav", tekst = utfall.visningstekst()))
+        add(ApiVisningsfelt.Tekst(tittel = "EØS-borger", tekst = svar.eøsBorger.jaNei()))
+        val oppholdstittel = if (svar.eøsBorger) "Opphold i Norge, EØS eller avtaleland" else "Opphold i Norge"
+        add(ApiVisningsfelt.Tekst(tittel = oppholdstittel, tekst = svar.oppholdIGodkjentOmråde.jaNei()))
+        svar.unntakAndreLedd?.let { add(ApiVisningsfelt.Tekst(tittel = "Unntak i andre ledd", tekst = it.visningstekst())) }
+        svar.godkjentOppholdInntilFireUker?.let {
+            add(ApiVisningsfelt.Tekst(tittel = "Godkjent opphold utenfor Norge i inntil fire uker", tekst = it.jaNei()))
+        }
         add(ApiVisningsfelt.Liste(tittel = "Dager", elementer = dager.tilPerioder().map { it.visningstekst() }))
-        add(ApiVisningsfelt.Tekst(tittel = "Utfall", tekst = utfall.visningstekst()))
-        add(ApiVisningsfelt.Liste(tittel = "Vilkår", elementer = vilkårsvurderinger.map { it.visningstekst() }))
-        add(ApiVisningsfelt.Tekst(tittel = "Begrunnelse", tekst = fritekstbegrunnelse))
         if (journalpostId.isNotEmpty()) {
             add(ApiVisningsfelt.Liste(tittel = "Journalposter", elementer = journalpostId))
         }
+        add(ApiVisningsfelt.Tekst(tittel = "Begrunnelse", tekst = fritekstbegrunnelse))
     }
 
 private val datoformat = DateTimeFormatter.ofPattern("dd.MM.yyyy")
@@ -84,23 +90,11 @@ private fun Utfall.visningstekst() =
         Utfall.IkkeOppfylt -> "Ikke oppfylt"
     }
 
-// Bruker lovreferansen som ble lagret med vurderingen, så visningen viser hjemmelen slik den var da vurderingen ble gjort
-private fun Vilkårsvurdering.visningstekst() = "${lovreferanse.visningstekst()}: ${utfall.visningstekst()}"
-
-private fun Lovreferanse.visningstekst() =
-    listOfNotNull(
-        "§ $paragraf",
-        avsnitt?.let { "${it.ordenstall()} ledd" },
-        setning?.let { "${it.ordenstall()} setning" },
-        bokstav?.let { "bokstav $it" },
-    ).joinToString(" ")
-
-private fun Int.ordenstall() =
+private fun UnntakAndreLedd.visningstekst() =
     when (this) {
-        1 -> "første"
-        2 -> "andre"
-        3 -> "tredje"
-        4 -> "fjerde"
-        5 -> "femte"
-        else -> "$this."
+        UnntakAndreLedd.MEDLEM_ETTER_2_5_2_6_2_8 -> "Medlem etter §§ 2-5, 2-6 eller 2-8"
+        UnntakAndreLedd.INNLAGT_I_HELSEINSTITUSJON -> "Innlagt i helseinstitusjon"
+        UnntakAndreLedd.INGEN -> "Nei"
     }
+
+private fun Boolean.jaNei() = if (this) "Ja" else "Nei"

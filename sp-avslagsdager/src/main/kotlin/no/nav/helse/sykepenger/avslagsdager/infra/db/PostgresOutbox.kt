@@ -87,7 +87,7 @@ private sealed interface OutboxMeldingDto {
 }
 
 private enum class HandlingTypeDto {
-    AVSLAGSDAGER_ENDRET,
+    MANUELT_VURDERT_OPPHOLDSKRAV,
 }
 
 private data class PeriodeDto(
@@ -144,10 +144,10 @@ private fun OutboxMeldingDto.tilOutboxMelding(): OutboxMelding =
 
 private fun HandlingType.tilDto() =
     when (this) {
-        HandlingType.AVSLAGSDAGER_ENDRET -> HandlingTypeDto.AVSLAGSDAGER_ENDRET
+        HandlingType.MANUELT_VURDERT_OPPHOLDSKRAV -> HandlingTypeDto.MANUELT_VURDERT_OPPHOLDSKRAV
     }
 
 private fun HandlingTypeDto.tilDomene() =
     when (this) {
-        HandlingTypeDto.AVSLAGSDAGER_ENDRET -> HandlingType.AVSLAGSDAGER_ENDRET
+        HandlingTypeDto.MANUELT_VURDERT_OPPHOLDSKRAV -> HandlingType.MANUELT_VURDERT_OPPHOLDSKRAV
     }

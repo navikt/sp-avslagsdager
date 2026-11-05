@@ -41,7 +41,7 @@ internal class OutboxPubliseringsjobbTest {
         assertEquals(identitetsnummer.value, melding.path("fødselsnummer").asString())
         assertEquals("Z999999", melding.path("saksbehandlerIdent").asString())
         assertEquals(handlingId.toString(), melding.path("handlingId").asString())
-        assertEquals("AVSLAGSDAGER_ENDRET", melding.path("handlingType").asString())
+        assertEquals("MANUELT_VURDERT_OPPHOLDSKRAV", melding.path("handlingType").asString())
         assertTrue(melding.path("kreverTotrinnsvurdering").asBoolean())
         assertEquals("2026-01-10T12:00:00Z", melding.path("tidspunkt").asString())
         assertEquals(behandlingId.toString(), melding.path("behandlingId").asString())
@@ -164,7 +164,7 @@ internal class OutboxPubliseringsjobbTest {
     ) = OutboxMelding.Saksbehandlerhandling(
         saksbehandlerIdent = "Z999999",
         handlingId = handlingId,
-        handlingType = HandlingType.AVSLAGSDAGER_ENDRET,
+        handlingType = HandlingType.MANUELT_VURDERT_OPPHOLDSKRAV,
         kreverTotrinnsvurdering = true,
         tidspunkt = Instant.parse("2026-01-10T12:00:00Z"),
         behandlingId = behandlingId,

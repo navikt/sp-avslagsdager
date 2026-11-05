@@ -51,7 +51,7 @@ internal sealed interface OutboxMelding {
 }
 
 internal enum class HandlingType {
-    AVSLAGSDAGER_ENDRET,
+    MANUELT_VURDERT_OPPHOLDSKRAV,
 }
 
 internal interface Outbox {

@@ -113,5 +113,5 @@ private fun OutboxMelding.tilJsonMessage(identitetsnummer: Identitetsnummer) =
 
 private fun HandlingType.tilMelding() =
     when (this) {
-        HandlingType.AVSLAGSDAGER_ENDRET -> "AVSLAGSDAGER_ENDRET"
+        HandlingType.MANUELT_VURDERT_OPPHOLDSKRAV -> "MANUELT_VURDERT_OPPHOLDSKRAV"
     }

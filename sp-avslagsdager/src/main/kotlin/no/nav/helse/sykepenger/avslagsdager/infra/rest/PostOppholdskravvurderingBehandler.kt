@@ -79,7 +79,7 @@ private fun Oppholdskravvurdering.tilSaksbehandlerhandling() =
     OutboxMelding.Saksbehandlerhandling(
         saksbehandlerIdent = saksbehandlerIdent,
         handlingId = id.value,
-        handlingType = HandlingType.AVSLAGSDAGER_ENDRET,
+        handlingType = HandlingType.MANUELT_VURDERT_OPPHOLDSKRAV,
         kreverTotrinnsvurdering = true,
         tidspunkt = vurdertTidspunkt,
         behandlingId = behandlingId,
