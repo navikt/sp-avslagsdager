@@ -46,6 +46,7 @@ internal sealed interface OutboxMelding {
     data class AvslagsdagerEndret(
         val vurderingId: UUID,
         val perioder: List<Periode>,
+        val manuellVurdering: Boolean,
     ) : OutboxMelding
 }
 

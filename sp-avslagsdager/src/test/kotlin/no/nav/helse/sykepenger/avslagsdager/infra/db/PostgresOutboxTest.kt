@@ -123,6 +123,7 @@ internal class PostgresOutboxTest : DatabaseTest() {
                     Periode(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 3)),
                     Periode(LocalDate.of(2026, 1, 10), LocalDate.of(2026, 1, 10)),
                 ),
+            manuellVurdering = true,
         )
 
     private fun vurdering(): Oppholdskravvurdering {

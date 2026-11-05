@@ -106,6 +106,7 @@ private fun OutboxMelding.tilJsonMessage(identitetsnummer: Identitetsnummer) =
                         "fødselsnummer" to identitetsnummer.value,
                         "vurderingId" to vurderingId,
                         "perioder" to perioder.map { mapOf("fom" to it.fom, "tom" to it.tom) },
+                        "manuellVurdering" to manuellVurdering,
                     ),
             )
     }

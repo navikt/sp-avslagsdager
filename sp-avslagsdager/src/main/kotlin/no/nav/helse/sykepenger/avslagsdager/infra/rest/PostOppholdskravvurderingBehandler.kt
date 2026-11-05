@@ -89,6 +89,7 @@ private fun Oppholdskravvurdering.tilAvslagsdagerEndret() =
     OutboxMelding.AvslagsdagerEndret(
         vurderingId = id.value,
         perioder = dager.tilPerioder(),
+        manuellVurdering = true,
     )
 
 private fun ApiOppholdskravvurderingRequest.tilSvar() =

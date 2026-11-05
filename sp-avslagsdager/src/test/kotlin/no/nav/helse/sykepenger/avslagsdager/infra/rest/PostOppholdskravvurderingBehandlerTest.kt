@@ -131,6 +131,7 @@ class PostOppholdskravvurderingBehandlerTest {
                 listOf("2026-01-01" to "2026-01-02", "2026-01-10" to "2026-01-10"),
                 endret["perioder"].values().map { it["fom"].asString() to it["tom"].asString() },
             )
+            assertTrue(endret["manuellVurdering"].asBoolean())
             assertFalse(endret.has("utfall"))
 
             assertEquals(listOf(identitetsnummer.value, identitetsnummer.value), listOf(rapid.inspektør.key(0), rapid.inspektør.key(1)))

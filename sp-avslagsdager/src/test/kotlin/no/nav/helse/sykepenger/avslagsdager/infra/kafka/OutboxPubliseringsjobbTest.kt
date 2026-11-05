@@ -50,7 +50,7 @@ internal class OutboxPubliseringsjobbTest {
     }
 
     @Test
-    fun `avslagsdager_endret publiseres med perioder og uten utfall`() {
+    fun `avslagsdager_endret publiseres med perioder og manuellVurdering, uten utfall`() {
         // Given
         val rapid = TestRapid()
         val vurderingId = UUID.randomUUID()
@@ -59,6 +59,7 @@ internal class OutboxPubliseringsjobbTest {
                 OutboxMelding.AvslagsdagerEndret(
                     vurderingId = vurderingId,
                     perioder = listOf(Periode(1.jan, 3.jan), Periode(10.jan, 10.jan)),
+                    manuellVurdering = true,
                 ),
                 identitetsnummer,
             ),
@@ -76,6 +77,7 @@ internal class OutboxPubliseringsjobbTest {
             listOf("2026-01-01" to "2026-01-03", "2026-01-10" to "2026-01-10"),
             melding.path("perioder").values().map { it.path("fom").asString() to it.path("tom").asString() },
         )
+        assertTrue(melding.path("manuellVurdering").asBoolean())
         assertFalse(melding.has("utfall"))
         assertEquals(identitetsnummer.value, rapid.inspektør.key(0))
     }
@@ -168,7 +170,7 @@ internal class OutboxPubliseringsjobbTest {
         behandlingId = behandlingId,
     )
 
-    private fun avslagsdagerEndret() = OutboxMelding.AvslagsdagerEndret(UUID.randomUUID(), listOf(Periode(1.jan, 1.jan)))
+    private fun avslagsdagerEndret() = OutboxMelding.AvslagsdagerEndret(vurderingId = UUID.randomUUID(), perioder = listOf(Periode(1.jan, 1.jan)), manuellVurdering = true)
 
     private class SvikterPåPubliseringNr(
         private val feilerPå: Int,

@@ -82,6 +82,7 @@ private sealed interface OutboxMeldingDto {
     data class AvslagsdagerEndret(
         val vurderingId: UUID,
         val perioder: List<PeriodeDto>,
+        val manuellVurdering: Boolean,
     ) : OutboxMeldingDto
 }
 
@@ -117,6 +118,7 @@ private fun OutboxMelding.tilDto(): OutboxMeldingDto =
             OutboxMeldingDto.AvslagsdagerEndret(
                 vurderingId = vurderingId,
                 perioder = perioder.map { PeriodeDto(it.fom, it.tom) },
+                manuellVurdering = manuellVurdering,
             )
     }
 
@@ -136,6 +138,7 @@ private fun OutboxMeldingDto.tilOutboxMelding(): OutboxMelding =
             OutboxMelding.AvslagsdagerEndret(
                 vurderingId = vurderingId,
                 perioder = perioder.map { Periode(it.fom, it.tom) },
+                manuellVurdering = manuellVurdering,
             )
     }
 
