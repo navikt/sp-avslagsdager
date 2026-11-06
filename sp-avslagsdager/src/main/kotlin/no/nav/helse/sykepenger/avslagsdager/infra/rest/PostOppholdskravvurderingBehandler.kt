@@ -1,9 +1,7 @@
 package no.nav.helse.sykepenger.avslagsdager.infra.rest
 
 import com.github.navikt.tbd_libs.personpseudoid.PersonPseudoId
-import no.nav.helse.sykepenger.avslagsdager.application.HandlingType
-import no.nav.helse.sykepenger.avslagsdager.application.OutboxKonvolutt
-import no.nav.helse.sykepenger.avslagsdager.application.OutboxMelding
+import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
 import no.nav.helse.sykepenger.avslagsdager.application.Transaksjonskontekst
 import no.nav.helse.sykepenger.avslagsdager.domain.Oppholdskravvurdering
 import no.nav.helse.sykepenger.avslagsdager.domain.OppholdskravvurderingResultat
@@ -67,30 +65,40 @@ internal class PostOppholdskravvurderingBehandler(
                 }
 
             kallKontekst.transaksjon.oppholdskravvurderinger.lagre(vurdering)
-            kallKontekst.transaksjon.outbox.leggTil(OutboxKonvolutt.ny(vurdering.tilSaksbehandlerhandling(), identitetsnummer))
-            kallKontekst.transaksjon.outbox.leggTil(OutboxKonvolutt.ny(vurdering.tilAvslagsdagerEndret(), identitetsnummer))
+            kallKontekst.transaksjon.outbox.leggTil(identitetsnummer.value, vurdering.saksbehandlerhandling())
+            kallKontekst.transaksjon.outbox.leggTil(identitetsnummer.value, vurdering.avslagsdagerEndret())
 
             RestResponse.ok(ApiOppholdskravvurderingResponse(vurderingId = vurdering.id.value))
         }
     }
 }
 
-private fun Oppholdskravvurdering.tilSaksbehandlerhandling() =
-    OutboxMelding.Saksbehandlerhandling(
-        saksbehandlerIdent = saksbehandlerIdent,
-        handlingId = id.value,
-        handlingType = HandlingType.MANUELT_VURDERT_OPPHOLDSKRAV,
-        kreverTotrinnsvurdering = true,
-        tidspunkt = vurdertTidspunkt,
-        behandlingId = behandlingId,
-    )
+private fun Oppholdskravvurdering.saksbehandlerhandling() =
+    JsonMessage
+        .newMessage(
+            "saksbehandlerhandling",
+            mapOf(
+                "fødselsnummer" to fødselsnummer,
+                "saksbehandlerIdent" to saksbehandlerIdent,
+                "handlingId" to id.value,
+                "handlingType" to "MANUELT_VURDERT_OPPHOLDSKRAV",
+                "kreverTotrinnsvurdering" to true,
+                "tidspunkt" to vurdertTidspunkt,
+                "behandlingId" to behandlingId,
+            ),
+        ).toJson()
 
-private fun Oppholdskravvurdering.tilAvslagsdagerEndret() =
-    OutboxMelding.AvslagsdagerEndret(
-        vurderingId = id.value,
-        perioder = dager.tilPerioder(),
-        manuellVurdering = true,
-    )
+private fun Oppholdskravvurdering.avslagsdagerEndret() =
+    JsonMessage
+        .newMessage(
+            "avslagsdager_endret",
+            mapOf(
+                "fødselsnummer" to fødselsnummer,
+                "vurderingId" to id.value,
+                "perioder" to dager.tilPerioder().map { mapOf("fom" to it.fom, "tom" to it.tom) },
+                "manuellVurdering" to true,
+            ),
+        ).toJson()
 
 private fun ApiOppholdskravvurderingRequest.tilSvar() =
     SvarPåOppholdskrav(

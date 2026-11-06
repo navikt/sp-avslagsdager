@@ -1,5 +1,4 @@
 [versions]
-kotlinx-coroutines = "1.11.0"
 flyway = "13.11.1"
 # Må følge Kotlin-versjonen som no.nav.sykepenger.kotlin-pluginen bruker
 kotlin = "2.4.21"
@@ -13,9 +12,6 @@ testcontainers = "2.0.5"
 ktor = "3.6.1"
 
 [libraries]
-httpclient5-fluent = "org.apache.httpcomponents.client5:httpclient5-fluent:5.6.5"
-kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
-wiremock = "org.wiremock:wiremock-jetty12:3.13.2"
 flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
 hikaricp = "com.zaxxer:HikariCP:7.1.0"
 cloud-sql-postgres-socket-factory = "com.google.cloud.sql:postgres-socket-factory:1.30.2"
@@ -26,6 +22,8 @@ rapids-and-rivers = "com.github.navikt:rapids-and-rivers:2026091610031789545782"
 sykepengerLibs-ktor-auth = { module = "no.nav.sykepenger.libs:ktor-auth", version.ref = "sykepengerLibs" }
 sykepengerLibs-logging = { module = "no.nav.sykepenger.libs:logging", version.ref = "sykepengerLibs" }
 sykepengerLibs-postgres = { module = "no.nav.sykepenger.libs:postgres", version.ref = "sykepengerLibs" }
+sykepengerLibs-leader-election = { module = "no.nav.sykepenger.libs:leader-election", version.ref = "sykepengerLibs" }
+sykepengerLibs-outbox = { module = "no.nav.sykepenger.libs:outbox", version.ref = "sykepengerLibs" }
 ktor-server-auth = { module = "io.ktor:ktor-server-auth", version.ref = "ktor" }
 ktor-server-call-id = { module = "io.ktor:ktor-server-call-id", version.ref = "ktor" }
 ktor-server-call-logging = { module = "io.ktor:ktor-server-call-logging", version.ref = "ktor" }

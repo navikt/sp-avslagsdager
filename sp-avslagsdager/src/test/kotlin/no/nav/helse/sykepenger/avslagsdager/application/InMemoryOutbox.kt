@@ -1,18 +1,18 @@
 package no.nav.helse.sykepenger.avslagsdager.application
 
 internal class InMemoryOutbox : Outbox {
-    private val meldinger = mutableMapOf<OutboxKonvoluttId, OutboxKonvolutt>()
-    private val publiserte = mutableSetOf<OutboxKonvoluttId>()
+    private val _meldinger = mutableListOf<Melding>()
+    internal val meldinger: List<Melding> get() = _meldinger.toList()
 
-    internal val upubliserteMeldinger: List<OutboxKonvolutt> get() = meldinger.values.filterNot { it.id in publiserte }
-
-    override fun leggTil(konvolutt: OutboxKonvolutt) {
-        meldinger[konvolutt.id] = konvolutt
+    override fun leggTil(
+        fødselsnummer: String,
+        melding: String,
+    ) {
+        _meldinger.add(Melding(fødselsnummer, melding))
     }
 
-    override fun hentUpubliserte(maksAntall: Int): List<OutboxKonvolutt> = upubliserteMeldinger.take(maksAntall)
-
-    override fun markerSomSendt(id: OutboxKonvoluttId) {
-        publiserte.add(id)
-    }
+    internal data class Melding(
+        val fødselsnummer: String,
+        val melding: String,
+    )
 }

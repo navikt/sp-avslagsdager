@@ -15,6 +15,8 @@ dependencies {
     implementation(libs.sykepengerLibs.ktor.auth)
     implementation(libs.sykepengerLibs.logging)
     implementation(libs.sykepengerLibs.postgres)
+    implementation(libs.sykepengerLibs.leader.election)
+    implementation(libs.sykepengerLibs.outbox)
     implementation(libs.ktor.server.auth)
     implementation(libs.ktor.server.call.id)
     implementation(libs.ktor.server.call.logging)
@@ -29,8 +31,6 @@ dependencies {
     implementation(libs.tbd.libs.person.pseudo.id)
     implementation(libs.tbd.libs.populasjonstilgangskontroll.provider.api)
     implementation(libs.tbd.libs.populasjonstilgangskontroll.provider.tilgangsmaskinen)
-    implementation(libs.httpclient5.fluent)
-    implementation(libs.kotlinx.coroutines.core)
     implementation(project(":migreringer"))
 
     testImplementation(libs.tbd.libs.mock.http.client)
@@ -39,5 +39,4 @@ dependencies {
     testImplementation(testFixtures(libs.sykepengerLibs.postgres))
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.mock.oauth2.server)
-    testImplementation(libs.wiremock)
 }

@@ -4,7 +4,6 @@ import com.github.navikt.tbd_libs.personpseudoid.Identitetsnummer
 import com.github.navikt.tbd_libs.populasjonstilgang.api.PopulasjonstilgangskontrollProvider
 import com.github.navikt.tbd_libs.populasjonstilgang.api.TilgangSomMangler
 import com.github.navikt.tbd_libs.populasjonstilgang.api.TilgangskontrollResultat
-import com.github.navikt.tbd_libs.rapids_and_rivers.test_support.TestRapid
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -22,8 +21,6 @@ import no.nav.helse.sykepenger.avslagsdager.application.InMemoryTransaksjonProvi
 import no.nav.helse.sykepenger.avslagsdager.domain.UnntakAndreLedd
 import no.nav.helse.sykepenger.avslagsdager.domain.Utfall
 import no.nav.helse.sykepenger.avslagsdager.domain.Vilkårskode
-import no.nav.helse.sykepenger.avslagsdager.infra.kafka.OutboxPubliseringsjobb
-import no.nav.helse.sykepenger.avslagsdager.leaderelection.LeaderElection
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.plugins.configureContentNegotiation
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.plugins.configureResources
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.plugins.configureStatusPages
@@ -87,11 +84,10 @@ class PostOppholdskravvurderingBehandlerTest {
         }
 
     @Test
-    fun `vurderingen publiseres som saksbehandlerhandling og avslagsdager_endret`() =
+    fun `vurderingen legges i outboxen som saksbehandlerhandling og avslagsdager_endret`() =
         testApplication {
             // Given
             val pseudoId = settOpp()
-            val rapid = TestRapid()
 
             // When
             val response =
@@ -105,25 +101,31 @@ class PostOppholdskravvurderingBehandlerTest {
                         ),
                     )
                 }
-            OutboxPubliseringsjobb(rapid, transaksjonProvider, LeaderElection { true }).kjørEnRunde()
+            val meldinger = transaksjonProvider.outbox.meldinger
 
             // Then
             assertEquals(HttpStatusCode.OK, response.status)
             val vurderingId = jacksonObjectMapper().readTree(response.bodyAsText())["vurderingId"].asString()
-            assertEquals(2, rapid.inspektør.size)
+            assertEquals(2, meldinger.size)
 
-            val handling = rapid.inspektør.message(0)
+            val handling = jacksonObjectMapper().readTree(meldinger[0].melding)
             assertEquals("saksbehandlerhandling", handling["@event_name"].asString())
             assertEquals(identitetsnummer.value, handling["fødselsnummer"].asString())
             assertEquals("Z999999", handling["saksbehandlerIdent"].asString())
             assertEquals(vurderingId, handling["handlingId"].asString())
             assertEquals("MANUELT_VURDERT_OPPHOLDSKRAV", handling["handlingType"].asString())
             assertTrue(handling["kreverTotrinnsvurdering"].asBoolean())
-            assertTrue(handling.hasNonNull("tidspunkt"))
+            assertEquals(
+                transaksjonProvider.oppholdskravvurderinger.alle
+                    .single()
+                    .vurdertTidspunkt
+                    .toString(),
+                handling["tidspunkt"].asString(),
+            )
             assertEquals(behandlingId.toString(), handling["behandlingId"].asString())
             assertFalse(handling.has("skjæringstidspunkt"))
 
-            val endret = rapid.inspektør.message(1)
+            val endret = jacksonObjectMapper().readTree(meldinger[1].melding)
             assertEquals("avslagsdager_endret", endret["@event_name"].asString())
             assertEquals(identitetsnummer.value, endret["fødselsnummer"].asString())
             assertEquals(vurderingId, endret["vurderingId"].asString())
@@ -134,7 +136,7 @@ class PostOppholdskravvurderingBehandlerTest {
             assertTrue(endret["manuellVurdering"].asBoolean())
             assertFalse(endret.has("utfall"))
 
-            assertEquals(listOf(identitetsnummer.value, identitetsnummer.value), listOf(rapid.inspektør.key(0), rapid.inspektør.key(1)))
+            assertEquals(listOf(identitetsnummer.value, identitetsnummer.value), meldinger.map { it.fødselsnummer })
         }
 
     @Test
@@ -172,7 +174,7 @@ class PostOppholdskravvurderingBehandlerTest {
             // Then
             assertEquals(HttpStatusCode.InternalServerError, response.status)
             assertEquals(emptyList<Any>(), transaksjonProvider.oppholdskravvurderinger.alle)
-            assertEquals(emptyList<Any>(), transaksjonProvider.outbox.upubliserteMeldinger)
+            assertEquals(emptyList<Any>(), transaksjonProvider.outbox.meldinger)
         }
 
     @Test
@@ -207,7 +209,7 @@ class PostOppholdskravvurderingBehandlerTest {
             // Then
             assertEquals(HttpStatusCode.Forbidden, response.status)
             assertEquals(emptyList<Any>(), transaksjonProvider.oppholdskravvurderinger.alle)
-            assertEquals(emptyList<Any>(), transaksjonProvider.outbox.upubliserteMeldinger)
+            assertEquals(emptyList<Any>(), transaksjonProvider.outbox.meldinger)
         }
 
     @Test
@@ -222,7 +224,7 @@ class PostOppholdskravvurderingBehandlerTest {
             // Then
             assertEquals(HttpStatusCode.Forbidden, response.status)
             assertEquals(emptyList<Any>(), transaksjonProvider.oppholdskravvurderinger.alle)
-            assertEquals(emptyList<Any>(), transaksjonProvider.outbox.upubliserteMeldinger)
+            assertEquals(emptyList<Any>(), transaksjonProvider.outbox.meldinger)
         }
 
     @Test
@@ -267,7 +269,7 @@ class PostOppholdskravvurderingBehandlerTest {
             assertEquals(forventetTittel, jacksonObjectMapper().readTree(response.bodyAsText())["title"].asString())
         }
         assertEquals(emptyList<Any>(), transaksjonProvider.oppholdskravvurderinger.alle)
-        assertEquals(emptyList<Any>(), transaksjonProvider.outbox.upubliserteMeldinger)
+        assertEquals(emptyList<Any>(), transaksjonProvider.outbox.meldinger)
     }
 
     private fun ApplicationTestBuilder.settOpp(

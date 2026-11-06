@@ -9,6 +9,7 @@ import com.github.navikt.tbd_libs.personpseudoid.ValkeyPersonPseudoIdProvider
 import com.github.navikt.tbd_libs.populasjonstilgang.api.PopulasjonstilgangskontrollProvider
 import com.github.navikt.tbd_libs.populasjonstilgang.client.PopulasjonstilgangConfig
 import com.github.navikt.tbd_libs.populasjonstilgang.client.tilgangsmaskinenClient
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStarted
 import io.ktor.server.application.ApplicationStopped
@@ -16,10 +17,8 @@ import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.helse.sykepenger.avslagsdager.application.Transaksjonskontekst
 import no.nav.helse.sykepenger.avslagsdager.infra.db.PostgresTransaksjonProvider
 import no.nav.helse.sykepenger.avslagsdager.infra.kafka.AvslagsdagerRiver
-import no.nav.helse.sykepenger.avslagsdager.infra.kafka.OutboxPubliseringsjobb
 import no.nav.helse.sykepenger.avslagsdager.infra.rest.GetSaksbehandlerhandlingVisningBehandler
 import no.nav.helse.sykepenger.avslagsdager.infra.rest.PostOppholdskravvurderingBehandler
-import no.nav.helse.sykepenger.avslagsdager.leaderelection.NaisLeaderElection
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.openapi.OpenApiConfig
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.openapi.configureOpenApiPlugin
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.plugins.configureCallId
@@ -33,12 +32,13 @@ import no.nav.helse.sykepenger.avslagsdager.rammeverk.rest.configureRestRuting
 import no.nav.sykepenger.libs.ktor.auth.AzureAdConfig
 import no.nav.sykepenger.libs.ktor.auth.TilgangsgrupperTilTilganger
 import no.nav.sykepenger.libs.ktor.auth.configureJwtAuthentication
+import no.nav.sykepenger.libs.leaderelection.NaisLeaderElection
 import no.nav.sykepenger.libs.logging.loggInfo
 import no.nav.sykepenger.libs.logging.navngittLogger
+import no.nav.sykepenger.libs.outbox.OutboxPubliseringsjobb
 import no.nav.sykepenger.libs.postgres.DatabaseConfig
 import no.nav.sykepenger.libs.postgres.dataSource
 import no.nav.sykepenger.libs.postgres.migrerSynkront
-import kotlin.time.Duration.Companion.seconds
 
 private const val APP_NAVN = "sp-avslagsdager"
 
@@ -115,16 +115,9 @@ internal fun launchApplication(
                 NaisLeaderElection(
                     electorSseUrl = env.getValue("ELECTOR_SSE_URL"),
                     hostname = env.getValue("HOSTNAME"),
-                    ventetidFørNyTilkobling = 5.seconds,
                 )
-            register(leaderElection)
-            register(
-                OutboxPubliseringsjobb(
-                    rapidsConnection = this,
-                    transaksjonProvider = transaksjonProvider,
-                    leaderElection = leaderElection,
-                ),
-            )
+            register(NaisLeaderElectionStatusListener(leaderElection))
+            register(OutboxPubliseringsjobb(dataSource, this, leaderElection))
             AvslagsdagerRiver(this, transaksjonProvider)
         }.start()
 }
@@ -158,3 +151,15 @@ internal fun endepunkter(oppholdskravvurderingAktivert: Boolean): RestRuting<Tra
 // Bare i dev inntil avslag etter oppholdskravet er klart for prod. Ukjent miljø gir av. Endepunktene finnes i alle
 // miljøer, men kaster når sperren er på, så et kall i prod blir en tydelig feil i stedet for en ny feilkode i API-et.
 internal fun oppholdskravvurderingAktivert(env: Map<String, String>) = env["NAIS_CLUSTER_NAME"] == "dev-gcp"
+
+private class NaisLeaderElectionStatusListener(
+    private val leaderElection: NaisLeaderElection,
+) : RapidsConnection.StatusListener {
+    override fun onStartup(rapidsConnection: RapidsConnection) {
+        leaderElection.start()
+    }
+
+    override fun onShutdownSignal(rapidsConnection: RapidsConnection) {
+        leaderElection.close()
+    }
+}

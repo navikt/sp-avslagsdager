@@ -1,90 +1,59 @@
 package no.nav.helse.sykepenger.avslagsdager.infra.db
 
-import com.github.navikt.tbd_libs.personpseudoid.Identitetsnummer
-import no.nav.helse.sykepenger.avslagsdager.application.HandlingType
-import no.nav.helse.sykepenger.avslagsdager.application.OutboxKonvolutt
-import no.nav.helse.sykepenger.avslagsdager.application.OutboxMelding
+import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
+import com.github.navikt.tbd_libs.rapids_and_rivers.test_support.TestRapid
 import no.nav.helse.sykepenger.avslagsdager.domain.Oppholdskravvurdering
 import no.nav.helse.sykepenger.avslagsdager.domain.OppholdskravvurderingResultat
-import no.nav.helse.sykepenger.avslagsdager.domain.Periode
 import no.nav.helse.sykepenger.avslagsdager.domain.SvarPåOppholdskrav
+import no.nav.sykepenger.libs.leaderelection.LeaderElection
+import no.nav.sykepenger.libs.outbox.OutboxPubliseringsjobb
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.time.Instant
+import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.time.LocalDate
 import java.util.UUID
 
 internal class PostgresOutboxTest : DatabaseTest() {
-    private val identitetsnummer = Identitetsnummer("12029240045")
+    private val fødselsnummer = "12029240045"
+    private val rapid = TestRapid()
 
     @Test
-    fun `saksbehandlerhandling lagres med typediskriminator og leses tilbake`() {
+    fun `meldingen publiseres uendret med fødselsnummeret som nøkkel`() {
         // Given
-        val konvolutt = OutboxKonvolutt.ny(saksbehandlerhandling(), identitetsnummer)
+        val melding = melding("avslagsdager_endret")
+        transaksjon { it.outbox.leggTil(fødselsnummer, melding) }
 
         // When
-        transaksjon { it.outbox.leggTil(konvolutt) }
+        publiserUpubliserte()
 
         // Then
-        assertEquals(listOf("SAKSBEHANDLERHANDLING"), Database.meldingstyperIOutbox())
-        assertEquals(listOf(konvolutt), transaksjon { it.outbox.hentUpubliserte() })
+        assertEquals(1, rapid.inspektør.size)
+        assertEquals(jacksonObjectMapper().readTree(melding), rapid.inspektør.message(0))
+        assertEquals(fødselsnummer, rapid.inspektør.key(0))
     }
 
     @Test
-    fun `avslagsdager_endret lagres med typediskriminator og leses tilbake`() {
+    fun `meldinger i samme transaksjon publiseres i innsettingsrekkefølge`() {
         // Given
-        val konvolutt = OutboxKonvolutt.ny(avslagsdagerEndret(), identitetsnummer)
-
-        // When
-        transaksjon { it.outbox.leggTil(konvolutt) }
-
-        // Then
-        assertEquals(listOf("AVSLAGSDAGER_ENDRET"), Database.meldingstyperIOutbox())
-        assertEquals(listOf(konvolutt), transaksjon { it.outbox.hentUpubliserte() })
-    }
-
-    @Test
-    fun `meldinger i samme transaksjon hentes i innsettingsrekkefølge`() {
-        // Given
-        val første = OutboxKonvolutt.ny(saksbehandlerhandling(), identitetsnummer)
-        val andre = OutboxKonvolutt.ny(avslagsdagerEndret(), identitetsnummer)
-
-        // When
         transaksjon { kontekst ->
-            kontekst.outbox.leggTil(første)
-            kontekst.outbox.leggTil(andre)
+            kontekst.outbox.leggTil(fødselsnummer, melding("saksbehandlerhandling"))
+            kontekst.outbox.leggTil(fødselsnummer, melding("avslagsdager_endret"))
         }
 
-        // Then
-        assertEquals(listOf(første, andre), transaksjon { it.outbox.hentUpubliserte() })
-    }
-
-    @Test
-    fun `henter bare de eldste meldingene når maksAntall er satt`() {
-        // Given
-        val meldinger = (1..3).map { OutboxKonvolutt.ny(avslagsdagerEndret(), identitetsnummer) }
-        transaksjon { kontekst -> meldinger.forEach(kontekst.outbox::leggTil) }
-
         // When
-        val upubliserte = transaksjon { it.outbox.hentUpubliserte(maksAntall = 2) }
+        publiserUpubliserte()
 
         // Then
-        assertEquals(meldinger.take(2), upubliserte)
-    }
-
-    @Test
-    fun `publiserte meldinger hentes ikke igjen`() {
-        // Given
-        val konvolutt = OutboxKonvolutt.ny(avslagsdagerEndret(), identitetsnummer)
-        transaksjon { it.outbox.leggTil(konvolutt) }
-
-        // When
-        transaksjon { it.outbox.markerSomSendt(konvolutt.id) }
-
-        // Then
-        assertTrue(transaksjon { it.outbox.hentUpubliserte() }.isEmpty())
+        assertEquals(
+            listOf("saksbehandlerhandling", "avslagsdager_endret"),
+            (0 until rapid.inspektør.size).map {
+                rapid.inspektør
+                    .message(it)
+                    .path("@event_name")
+                    .asString()
+            },
+        )
     }
 
     @Test
@@ -96,40 +65,23 @@ internal class PostgresOutboxTest : DatabaseTest() {
         // When
         assertThrows<IllegalStateException> {
             transaksjon { kontekst ->
-                kontekst.outbox.leggTil(OutboxKonvolutt.ny(avslagsdagerEndret(), identitetsnummer))
+                kontekst.outbox.leggTil(fødselsnummer, melding("avslagsdager_endret"))
                 kontekst.oppholdskravvurderinger.lagre(vurdering)
             }
         }
 
         // Then
-        assertTrue(transaksjon { it.outbox.hentUpubliserte() }.isEmpty())
+        assertEquals(0, Database.antallRader("outbox"))
     }
 
-    private fun saksbehandlerhandling() =
-        OutboxMelding.Saksbehandlerhandling(
-            saksbehandlerIdent = "Z999999",
-            handlingId = UUID.randomUUID(),
-            handlingType = HandlingType.MANUELT_VURDERT_OPPHOLDSKRAV,
-            kreverTotrinnsvurdering = true,
-            tidspunkt = Instant.parse("2026-01-10T12:00:00Z"),
-            behandlingId = UUID.randomUUID(),
-        )
+    private fun publiserUpubliserte() = OutboxPubliseringsjobb(Database.dataSource, rapid, LeaderElection { true }).publiserUpubliserte()
 
-    private fun avslagsdagerEndret() =
-        OutboxMelding.AvslagsdagerEndret(
-            vurderingId = UUID.randomUUID(),
-            perioder =
-                listOf(
-                    Periode(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 3)),
-                    Periode(LocalDate.of(2026, 1, 10), LocalDate.of(2026, 1, 10)),
-                ),
-            manuellVurdering = true,
-        )
+    private fun melding(eventName: String) = JsonMessage.newMessage(eventName, mapOf("fødselsnummer" to fødselsnummer, "id" to UUID.randomUUID())).toJson()
 
     private fun vurdering(): Oppholdskravvurdering {
         val resultat =
             Oppholdskravvurdering.vurder(
-                fødselsnummer = identitetsnummer.value,
+                fødselsnummer = fødselsnummer,
                 behandlingId = UUID.randomUUID(),
                 dager = listOf(LocalDate.of(2026, 1, 1)),
                 svar = SvarPåOppholdskrav(eøsBorger = true, oppholdIGodkjentOmråde = true, unntakAndreLedd = null, godkjentOppholdInntilFireUker = null),
