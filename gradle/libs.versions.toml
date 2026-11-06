@@ -6,11 +6,11 @@ kotlin = "2.4.21"
 kotlinx-serialization-json = "1.12.0"
 tbd-libs = "20261029.1843"
 sykepengerGradlePlugins = "20261029.1945"
-sykepengerLibs = "20261029.1851"
+sykepengerLibs = "20261105.1956"
 smiley4-ktor-openapi-tools = "5.7.0"
 smiley4-schema-kenerator = "2.7.2"
 testcontainers = "2.0.5"
-ktor = "3.6.0"
+ktor = "3.6.1"
 
 [libraries]
 httpclient5-fluent = "org.apache.httpcomponents.client5:httpclient5-fluent:5.6.5"
