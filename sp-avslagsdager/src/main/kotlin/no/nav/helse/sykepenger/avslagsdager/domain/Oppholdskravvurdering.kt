@@ -59,17 +59,6 @@ internal data class Oppholdskravvurdering(
     val vurdertTidspunkt: Instant,
 ) {
     /**
-     * Avslagsdagen for [dato] etter vurderingen. En oppfylt vurdering avslår ingen dager (gir null), også når enkelte
-     * vilkår i den ikke er oppfylt, fordi første ledd og unntakene er alternative grunnlag.
-     */
-    fun avslagsdag(dato: LocalDate): Avslagsdag? {
-        require(dato in dager) { "Vurderingen $id omfatter ikke $dato" }
-        if (utfall == Utfall.Oppfylt) return null
-        val vilkårskoder = vilkårsvurderinger.filter { it.utfall == Utfall.IkkeOppfylt }.map { it.vilkårskode }
-        return Avslagsdag(vurderingId = id, dato = dato, vilkårskoder = vilkårskoder)
-    }
-
-    /**
      * Utfallet for [dato] etter vurderingen, med vilkårskodene som har samme utfall som vurderingen. En oppfylt vurdering
      * får dermed bare grunnlaget som er oppfylt, selv om enkelte vilkår før det ikke er oppfylt.
      */

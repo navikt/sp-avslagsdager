@@ -26,7 +26,7 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
         // Then
         assertEquals(1, rapid.inspektør.size)
         assertEquals(FØDSELSNUMMER, rapid.inspektør.key(0))
-        assertEquals(Løsning(emptyList(), emptyList()), rapid.inspektør.message(0).løsning())
+        assertEquals(Løsning(emptyList()), rapid.inspektør.message(0).løsning())
     }
 
     @Test
@@ -40,7 +40,6 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
         // Then
         assertEquals(
             Løsning(
-                vurderingIder = listOf(vurdering.id.value),
                 vurderteDager =
                     listOf(
                         VurdertDagJson(vurdering.id.value, "2026-01-05", IKKE_OPPFYLT, VILKÅRSKODER_IKKE_OPPFYLT),
@@ -52,18 +51,22 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
     }
 
     @Test
-    fun `avslagsdager er dagene som ikke er oppfylt, til Spleis har tatt i bruk vurderteDager`() {
+    fun `løsningen har bare vurderteDager`() {
         // Given
-        val avslag = lagre(ikkeOppfylt, dager = listOf(5.jan), vurdertTidspunkt = kl(12))
-        lagre(oppfylt, dager = listOf(6.jan), vurdertTidspunkt = kl(13))
+        lagre(ikkeOppfylt, dager = listOf(5.jan))
 
         // When
         rapid.sendTestMessage(behov(fom = 1.jan, tom = 31.jan))
 
         // Then
         assertEquals(
-            listOf(Oppføring(avslag.id.value, "2026-01-05", VILKÅRSKODER_IKKE_OPPFYLT)),
-            rapid.inspektør.message(0).avslagsdager(),
+            listOf("vurderteDager"),
+            rapid.inspektør
+                .message(0)
+                .path("@løsning")
+                .path("Avslagsdager")
+                .propertyNames()
+                .toList(),
         )
     }
 
@@ -79,7 +82,6 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
         // Then
         assertEquals(
             Løsning(
-                vurderingIder = listOf(vurdering.id.value),
                 vurderteDager =
                     listOf(
                         VurdertDagJson(vurdering.id.value, "2026-01-05", IKKE_OPPFYLT, VILKÅRSKODER_IKKE_OPPFYLT),
@@ -91,7 +93,7 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
     }
 
     @Test
-    fun `flere vurderinger gir dagene sortert på dato og ID-ene i rekkefølgen de først gjelder`() {
+    fun `flere vurderinger gir dagene sortert på dato`() {
         // Given
         val senere = lagre(ikkeOppfylt, dager = listOf(10.jan))
         val tidligere = lagre(ikkeOppfyltIkkeEøsBorger, dager = listOf(2.jan, 1.jan))
@@ -102,7 +104,6 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
         // Then
         assertEquals(
             Løsning(
-                vurderingIder = listOf(tidligere.id.value, senere.id.value),
                 vurderteDager =
                     listOf(
                         VurdertDagJson(tidligere.id.value, "2026-01-01", IKKE_OPPFYLT, VILKÅRSKODER_IKKE_OPPFYLT_IKKE_EØS_BORGER),
@@ -125,7 +126,6 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
         // Then
         assertEquals(
             Løsning(
-                vurderingIder = listOf(vurdering.id.value),
                 vurderteDager = listOf(VurdertDagJson(vurdering.id.value, "2026-01-05", OPPFYLT, VILKÅRSKODER_OPPFYLT)),
             ),
             rapid.inspektør.message(0).løsning(),
@@ -144,7 +144,6 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
         // Then
         assertEquals(
             Løsning(
-                vurderingIder = listOf(avslag.id.value, omgjøring.id.value),
                 vurderteDager =
                     listOf(
                         VurdertDagJson(avslag.id.value, "2026-01-05", IKKE_OPPFYLT, VILKÅRSKODER_IKKE_OPPFYLT),
@@ -167,7 +166,6 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
         // Then
         assertEquals(
             Løsning(
-                vurderingIder = listOf(omgjøring.id.value),
                 vurderteDager =
                     listOf(VurdertDagJson(omgjøring.id.value, "2026-01-05", IKKE_OPPFYLT, VILKÅRSKODER_IKKE_OPPFYLT_IKKE_EØS_BORGER)),
             ),
@@ -187,7 +185,6 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
         // Then
         assertEquals(
             Løsning(
-                vurderingIder = listOf(nyest.id.value),
                 vurderteDager = listOf(VurdertDagJson(nyest.id.value, "2026-01-05", OPPFYLT, VILKÅRSKODER_OPPFYLT)),
             ),
             rapid.inspektør.message(0).løsning(),
@@ -203,7 +200,7 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
         rapid.sendTestMessage(behov(fom = 1.jan, tom = 31.jan))
 
         // Then
-        assertEquals(Løsning(emptyList(), emptyList()), rapid.inspektør.message(0).løsning())
+        assertEquals(Løsning(emptyList()), rapid.inspektør.message(0).løsning())
     }
 
     @Test
@@ -212,7 +209,7 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
         val medLøsning =
             behov(fom = 1.jan, tom = 31.jan).replace(
                 "\"@behov\"",
-                "\"@løsning\": { \"Avslagsdager\": { \"vurderingIder\": [], \"avslagsdager\": [] } }, \"@behov\"",
+                "\"@løsning\": { \"Avslagsdager\": { \"vurderteDager\": [] } }, \"@behov\"",
             )
 
         // When
@@ -271,7 +268,6 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
     }
 
     private data class Løsning(
-        val vurderingIder: List<UUID>,
         val vurderteDager: List<VurdertDagJson>,
     )
 
@@ -283,16 +279,9 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
         val vilkår: String = "OPPHOLDSKRAV",
     )
 
-    private data class Oppføring(
-        val vurderingId: UUID,
-        val dato: String,
-        val vilkårskoder: List<String>,
-    )
-
     private fun JsonNode.løsning(): Løsning {
         val løsning = path("@løsning").path("Avslagsdager")
         return Løsning(
-            vurderingIder = løsning.path("vurderingIder").values().map { UUID.fromString(it.asString()) },
             vurderteDager =
                 løsning.path("vurderteDager").values().map { dag ->
                     VurdertDagJson(
@@ -305,15 +294,6 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
                 },
         )
     }
-
-    private fun JsonNode.avslagsdager() =
-        path("@løsning").path("Avslagsdager").path("avslagsdager").values().map { oppføring ->
-            Oppføring(
-                vurderingId = UUID.fromString(oppføring.path("vurderingId").asString()),
-                dato = oppføring.path("dato").asString(),
-                vilkårskoder = oppføring.path("vilkårskoder").values().map { it.asString() },
-            )
-        }
 
     private companion object {
         const val FØDSELSNUMMER = "12029240045"

@@ -258,45 +258,6 @@ internal class OppholdskravvurderingTest {
     }
 
     @Test
-    fun `en vurdering som ikke er oppfylt, gir én avslagsdag per dag med vilkårskodene som ikke er oppfylt`() {
-        // Given
-        val vurdering =
-            vurdert(
-                svar(eøsBorger = false, oppholdIGodkjentOmråde = false, unntakAndreLedd = INGEN, godkjentOppholdInntilFireUker = false),
-                dager = listOf(LocalDate.of(2026, 1, 6), LocalDate.of(2026, 1, 5)),
-            )
-
-        // When
-        val avslagsdager = vurdering.dager.mapNotNull(vurdering::avslagsdag)
-
-        // Then
-        val vilkårskoder =
-            listOf(
-                OPPHOLD_I_NORGE_IKKE_EØS_BORGER,
-                UNNTAK_MEDLEM_ETTER_2_5_2_6_2_8,
-                UNNTAK_INNLAGT_HELSEINSTITUSJON,
-                UNNTAK_GODKJENT_OPPHOLD_INNTIL_FIRE_UKER,
-            )
-        assertEquals(
-            listOf(
-                Avslagsdag(vurdering.id, LocalDate.of(2026, 1, 5), vilkårskoder),
-                Avslagsdag(vurdering.id, LocalDate.of(2026, 1, 6), vilkårskoder),
-            ),
-            avslagsdager,
-        )
-    }
-
-    @Test
-    fun `en oppfylt vurdering gir ingen avslagsdager, selv om noen vilkår ikke er oppfylt`() {
-        // Given
-        val vurdering =
-            vurdert(svar(eøsBorger = true, oppholdIGodkjentOmråde = false, unntakAndreLedd = MEDLEM_ETTER_2_5_2_6_2_8))
-
-        // When / Then
-        assertEquals(emptyList<Avslagsdag>(), vurdering.dager.mapNotNull(vurdering::avslagsdag))
-    }
-
-    @Test
     fun `en vurdering som ikke er oppfylt, gir en vurdert dag per dag med vilkårskodene som ikke er oppfylt`() {
         // Given
         val vurdering =

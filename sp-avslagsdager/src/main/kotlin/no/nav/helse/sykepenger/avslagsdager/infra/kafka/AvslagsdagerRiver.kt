@@ -9,7 +9,6 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
 import no.nav.helse.sykepenger.avslagsdager.application.Transaksjonskontekst
 import no.nav.helse.sykepenger.avslagsdager.application.avslagsdager
-import no.nav.helse.sykepenger.avslagsdager.domain.Avslagsdag
 import no.nav.helse.sykepenger.avslagsdager.domain.Periode
 import no.nav.helse.sykepenger.avslagsdager.domain.VurdertDag
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.rest.TransaksjonProvider
@@ -19,8 +18,9 @@ import no.nav.sykepenger.libs.logging.medMdc
 import tools.jackson.databind.JsonNode
 
 /**
- * Svarer Spleis med de gjeldende vurderingene og de avslåtte dagene i beregningsperioden (ADR 0005). Appen svarer for
- * alle personer, også dem uten vurderinger. Feil, som at databasen er nede, kastes videre, så meldingen leses på nytt.
+ * Svarer Spleis med utfallet av den gjeldende vurderingen for hver vurderte dag i beregningsperioden (ADR 0005).
+ * Appen svarer for alle personer, også dem uten vurderinger. Feil, som at databasen er nede, kastes videre, så
+ * meldingen leses på nytt.
  */
 internal class AvslagsdagerRiver(
     rapidsConnection: RapidsConnection,
@@ -60,15 +60,11 @@ internal class AvslagsdagerRiver(
                 mapOf(
                     BEHOV to
                         mapOf(
-                            "vurderingIder" to løsning.vurderingIder.map { it.value },
-                            "avslagsdager" to løsning.avslagsdager.map { it.tilLøsning() },
                             "vurderteDager" to løsning.vurderteDager.map { it.tilLøsning() },
                         ),
                 )
             loggInfo(
                 "Svarer på behov for $BEHOV",
-                "antallVurderinger" to løsning.vurderingIder.size.toString(),
-                "antallAvslagsdager" to løsning.avslagsdager.size.toString(),
                 "antallVurderteDager" to løsning.vurderteDager.size.toString(),
             )
             context.publish(packet.toJson())
@@ -83,13 +79,6 @@ internal class AvslagsdagerRiver(
         const val TOM = "$BEHOV.tom"
     }
 }
-
-private fun Avslagsdag.tilLøsning() =
-    mapOf(
-        "vurderingId" to vurderingId.value,
-        "dato" to dato,
-        "vilkårskoder" to vilkårskoder.map { it.name },
-    )
 
 private fun VurdertDag.tilLøsning() =
     mapOf(
