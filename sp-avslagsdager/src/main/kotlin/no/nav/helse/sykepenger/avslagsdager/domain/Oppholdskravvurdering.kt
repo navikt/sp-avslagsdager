@@ -69,6 +69,16 @@ internal data class Oppholdskravvurdering(
         return Avslagsdag(vurderingId = id, dato = dato, vilkårskoder = vilkårskoder)
     }
 
+    /**
+     * Utfallet for [dato] etter vurderingen, med vilkårskodene som har samme utfall som vurderingen. En oppfylt vurdering
+     * får dermed bare grunnlaget som er oppfylt, selv om enkelte vilkår før det ikke er oppfylt.
+     */
+    fun vurdertDag(dato: LocalDate): VurdertDag {
+        require(dato in dager) { "Vurderingen $id omfatter ikke $dato" }
+        val vilkårskoder = vilkårsvurderinger.filter { it.utfall == utfall }.map { it.vilkårskode }
+        return VurdertDag(vurderingId = id, vilkår = LøpendeVilkår.OPPHOLDSKRAV, dato = dato, utfall = utfall, vilkårskoder = vilkårskoder)
+    }
+
     companion object {
         fun vurder(
             fødselsnummer: String,

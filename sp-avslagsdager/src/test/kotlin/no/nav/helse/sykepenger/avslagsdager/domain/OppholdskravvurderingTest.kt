@@ -296,6 +296,51 @@ internal class OppholdskravvurderingTest {
         assertEquals(emptyList<Avslagsdag>(), vurdering.dager.mapNotNull(vurdering::avslagsdag))
     }
 
+    @Test
+    fun `en vurdering som ikke er oppfylt, gir en vurdert dag per dag med vilkårskodene som ikke er oppfylt`() {
+        // Given
+        val vurdering =
+            vurdert(
+                svar(eøsBorger = false, oppholdIGodkjentOmråde = false, unntakAndreLedd = INGEN, godkjentOppholdInntilFireUker = false),
+                dager = listOf(LocalDate.of(2026, 1, 6), LocalDate.of(2026, 1, 5)),
+            )
+
+        // When
+        val vurderteDager = vurdering.dager.map(vurdering::vurdertDag)
+
+        // Then
+        val vilkårskoder =
+            listOf(
+                OPPHOLD_I_NORGE_IKKE_EØS_BORGER,
+                UNNTAK_MEDLEM_ETTER_2_5_2_6_2_8,
+                UNNTAK_INNLAGT_HELSEINSTITUSJON,
+                UNNTAK_GODKJENT_OPPHOLD_INNTIL_FIRE_UKER,
+            )
+        assertEquals(
+            listOf(
+                VurdertDag(vurdering.id, LøpendeVilkår.OPPHOLDSKRAV, LocalDate.of(2026, 1, 5), IkkeOppfylt, vilkårskoder),
+                VurdertDag(vurdering.id, LøpendeVilkår.OPPHOLDSKRAV, LocalDate.of(2026, 1, 6), IkkeOppfylt, vilkårskoder),
+            ),
+            vurderteDager,
+        )
+    }
+
+    @Test
+    fun `en oppfylt vurdering gir en vurdert dag med vilkårskodene som er oppfylt`() {
+        // Given
+        val vurdering =
+            vurdert(svar(eøsBorger = true, oppholdIGodkjentOmråde = false, unntakAndreLedd = MEDLEM_ETTER_2_5_2_6_2_8))
+
+        // When
+        val vurdertDag = vurdering.vurdertDag(LocalDate.of(2026, 1, 5))
+
+        // Then
+        assertEquals(
+            VurdertDag(vurdering.id, LøpendeVilkår.OPPHOLDSKRAV, LocalDate.of(2026, 1, 5), Oppfylt, listOf(UNNTAK_MEDLEM_ETTER_2_5_2_6_2_8)),
+            vurdertDag,
+        )
+    }
+
     private fun Oppholdskravvurdering.koderOgUtfall() = vilkårsvurderinger.map { it.vilkårskode to it.utfall }
 
     private fun svar(

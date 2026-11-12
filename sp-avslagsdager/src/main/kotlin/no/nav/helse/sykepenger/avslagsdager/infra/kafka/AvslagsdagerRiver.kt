@@ -11,6 +11,7 @@ import no.nav.helse.sykepenger.avslagsdager.application.Transaksjonskontekst
 import no.nav.helse.sykepenger.avslagsdager.application.avslagsdager
 import no.nav.helse.sykepenger.avslagsdager.domain.Avslagsdag
 import no.nav.helse.sykepenger.avslagsdager.domain.Periode
+import no.nav.helse.sykepenger.avslagsdager.domain.VurdertDag
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.rest.TransaksjonProvider
 import no.nav.sykepenger.libs.logging.MdcKey
 import no.nav.sykepenger.libs.logging.loggInfo
@@ -61,12 +62,14 @@ internal class AvslagsdagerRiver(
                         mapOf(
                             "vurderingIder" to løsning.vurderingIder.map { it.value },
                             "avslagsdager" to løsning.avslagsdager.map { it.tilLøsning() },
+                            "vurderteDager" to løsning.vurderteDager.map { it.tilLøsning() },
                         ),
                 )
             loggInfo(
                 "Svarer på behov for $BEHOV",
                 "antallVurderinger" to løsning.vurderingIder.size.toString(),
                 "antallAvslagsdager" to løsning.avslagsdager.size.toString(),
+                "antallVurderteDager" to løsning.vurderteDager.size.toString(),
             )
             context.publish(packet.toJson())
         }
@@ -85,5 +88,14 @@ private fun Avslagsdag.tilLøsning() =
     mapOf(
         "vurderingId" to vurderingId.value,
         "dato" to dato,
+        "vilkårskoder" to vilkårskoder.map { it.name },
+    )
+
+private fun VurdertDag.tilLøsning() =
+    mapOf(
+        "vurderingId" to vurderingId.value,
+        "vilkår" to vilkår.name,
+        "dato" to dato,
+        "utfall" to utfall.name,
         "vilkårskoder" to vilkårskoder.map { it.name },
     )

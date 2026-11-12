@@ -41,13 +41,29 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
         assertEquals(
             Løsning(
                 vurderingIder = listOf(vurdering.id.value),
-                avslagsdager =
+                vurderteDager =
                     listOf(
-                        Oppføring(vurdering.id.value, "2026-01-05", VILKÅRSKODER_IKKE_OPPFYLT),
-                        Oppføring(vurdering.id.value, "2026-01-06", VILKÅRSKODER_IKKE_OPPFYLT),
+                        VurdertDagJson(vurdering.id.value, "2026-01-05", IKKE_OPPFYLT, VILKÅRSKODER_IKKE_OPPFYLT),
+                        VurdertDagJson(vurdering.id.value, "2026-01-06", IKKE_OPPFYLT, VILKÅRSKODER_IKKE_OPPFYLT),
                     ),
             ),
             rapid.inspektør.message(0).løsning(),
+        )
+    }
+
+    @Test
+    fun `avslagsdager er dagene som ikke er oppfylt, til Spleis har tatt i bruk vurderteDager`() {
+        // Given
+        val avslag = lagre(ikkeOppfylt, dager = listOf(5.jan), vurdertTidspunkt = kl(12))
+        lagre(oppfylt, dager = listOf(6.jan), vurdertTidspunkt = kl(13))
+
+        // When
+        rapid.sendTestMessage(behov(fom = 1.jan, tom = 31.jan))
+
+        // Then
+        assertEquals(
+            listOf(Oppføring(avslag.id.value, "2026-01-05", VILKÅRSKODER_IKKE_OPPFYLT)),
+            rapid.inspektør.message(0).avslagsdager(),
         )
     }
 
@@ -64,10 +80,10 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
         assertEquals(
             Løsning(
                 vurderingIder = listOf(vurdering.id.value),
-                avslagsdager =
+                vurderteDager =
                     listOf(
-                        Oppføring(vurdering.id.value, "2026-01-05", VILKÅRSKODER_IKKE_OPPFYLT),
-                        Oppføring(vurdering.id.value, "2026-01-06", VILKÅRSKODER_IKKE_OPPFYLT),
+                        VurdertDagJson(vurdering.id.value, "2026-01-05", IKKE_OPPFYLT, VILKÅRSKODER_IKKE_OPPFYLT),
+                        VurdertDagJson(vurdering.id.value, "2026-01-06", IKKE_OPPFYLT, VILKÅRSKODER_IKKE_OPPFYLT),
                     ),
             ),
             rapid.inspektør.message(0).løsning(),
@@ -87,11 +103,11 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
         assertEquals(
             Løsning(
                 vurderingIder = listOf(tidligere.id.value, senere.id.value),
-                avslagsdager =
+                vurderteDager =
                     listOf(
-                        Oppføring(tidligere.id.value, "2026-01-01", VILKÅRSKODER_IKKE_OPPFYLT_IKKE_EØS_BORGER),
-                        Oppføring(tidligere.id.value, "2026-01-02", VILKÅRSKODER_IKKE_OPPFYLT_IKKE_EØS_BORGER),
-                        Oppføring(senere.id.value, "2026-01-10", VILKÅRSKODER_IKKE_OPPFYLT),
+                        VurdertDagJson(tidligere.id.value, "2026-01-01", IKKE_OPPFYLT, VILKÅRSKODER_IKKE_OPPFYLT_IKKE_EØS_BORGER),
+                        VurdertDagJson(tidligere.id.value, "2026-01-02", IKKE_OPPFYLT, VILKÅRSKODER_IKKE_OPPFYLT_IKKE_EØS_BORGER),
+                        VurdertDagJson(senere.id.value, "2026-01-10", IKKE_OPPFYLT, VILKÅRSKODER_IKKE_OPPFYLT),
                     ),
             ),
             rapid.inspektør.message(0).løsning(),
@@ -99,7 +115,7 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
     }
 
     @Test
-    fun `en oppfylt vurdering gir ID-en, men ingen avslagsdager`() {
+    fun `en oppfylt vurdering gir dagene med utfallet oppfylt`() {
         // Given
         val vurdering = lagre(oppfylt, dager = listOf(5.jan))
 
@@ -107,11 +123,17 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
         rapid.sendTestMessage(behov(fom = 1.jan, tom = 31.jan))
 
         // Then
-        assertEquals(Løsning(listOf(vurdering.id.value), emptyList()), rapid.inspektør.message(0).løsning())
+        assertEquals(
+            Løsning(
+                vurderingIder = listOf(vurdering.id.value),
+                vurderteDager = listOf(VurdertDagJson(vurdering.id.value, "2026-01-05", OPPFYLT, VILKÅRSKODER_OPPFYLT)),
+            ),
+            rapid.inspektør.message(0).løsning(),
+        )
     }
 
     @Test
-    fun `en oppfylt omgjøring fjerner avslaget for dagene den omfatter`() {
+    fun `en oppfylt omgjøring gjelder for dagene den omfatter`() {
         // Given
         val avslag = lagre(ikkeOppfylt, dager = listOf(5.jan, 6.jan), vurdertTidspunkt = kl(12))
         val omgjøring = lagre(oppfylt, dager = listOf(6.jan), vurdertTidspunkt = kl(13))
@@ -123,7 +145,11 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
         assertEquals(
             Løsning(
                 vurderingIder = listOf(avslag.id.value, omgjøring.id.value),
-                avslagsdager = listOf(Oppføring(avslag.id.value, "2026-01-05", VILKÅRSKODER_IKKE_OPPFYLT)),
+                vurderteDager =
+                    listOf(
+                        VurdertDagJson(avslag.id.value, "2026-01-05", IKKE_OPPFYLT, VILKÅRSKODER_IKKE_OPPFYLT),
+                        VurdertDagJson(omgjøring.id.value, "2026-01-06", OPPFYLT, VILKÅRSKODER_OPPFYLT),
+                    ),
             ),
             rapid.inspektør.message(0).løsning(),
         )
@@ -142,7 +168,8 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
         assertEquals(
             Løsning(
                 vurderingIder = listOf(omgjøring.id.value),
-                avslagsdager = listOf(Oppføring(omgjøring.id.value, "2026-01-05", VILKÅRSKODER_IKKE_OPPFYLT_IKKE_EØS_BORGER)),
+                vurderteDager =
+                    listOf(VurdertDagJson(omgjøring.id.value, "2026-01-05", IKKE_OPPFYLT, VILKÅRSKODER_IKKE_OPPFYLT_IKKE_EØS_BORGER)),
             ),
             rapid.inspektør.message(0).løsning(),
         )
@@ -158,7 +185,13 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
         rapid.sendTestMessage(behov(fom = 1.jan, tom = 31.jan))
 
         // Then
-        assertEquals(Løsning(listOf(nyest.id.value), emptyList()), rapid.inspektør.message(0).løsning())
+        assertEquals(
+            Løsning(
+                vurderingIder = listOf(nyest.id.value),
+                vurderteDager = listOf(VurdertDagJson(nyest.id.value, "2026-01-05", OPPFYLT, VILKÅRSKODER_OPPFYLT)),
+            ),
+            rapid.inspektør.message(0).løsning(),
+        )
     }
 
     @Test
@@ -239,7 +272,15 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
 
     private data class Løsning(
         val vurderingIder: List<UUID>,
-        val avslagsdager: List<Oppføring>,
+        val vurderteDager: List<VurdertDagJson>,
+    )
+
+    private data class VurdertDagJson(
+        val vurderingId: UUID,
+        val dato: String,
+        val utfall: String,
+        val vilkårskoder: List<String>,
+        val vilkår: String = "OPPHOLDSKRAV",
     )
 
     private data class Oppføring(
@@ -252,19 +293,32 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
         val løsning = path("@løsning").path("Avslagsdager")
         return Løsning(
             vurderingIder = løsning.path("vurderingIder").values().map { UUID.fromString(it.asString()) },
-            avslagsdager =
-                løsning.path("avslagsdager").values().map { oppføring ->
-                    Oppføring(
-                        vurderingId = UUID.fromString(oppføring.path("vurderingId").asString()),
-                        dato = oppføring.path("dato").asString(),
-                        vilkårskoder = oppføring.path("vilkårskoder").values().map { it.asString() },
+            vurderteDager =
+                løsning.path("vurderteDager").values().map { dag ->
+                    VurdertDagJson(
+                        vurderingId = UUID.fromString(dag.path("vurderingId").asString()),
+                        dato = dag.path("dato").asString(),
+                        utfall = dag.path("utfall").asString(),
+                        vilkårskoder = dag.path("vilkårskoder").values().map { it.asString() },
+                        vilkår = dag.path("vilkår").asString(),
                     )
                 },
         )
     }
 
+    private fun JsonNode.avslagsdager() =
+        path("@løsning").path("Avslagsdager").path("avslagsdager").values().map { oppføring ->
+            Oppføring(
+                vurderingId = UUID.fromString(oppføring.path("vurderingId").asString()),
+                dato = oppføring.path("dato").asString(),
+                vilkårskoder = oppføring.path("vilkårskoder").values().map { it.asString() },
+            )
+        }
+
     private companion object {
         const val FØDSELSNUMMER = "12029240045"
+        const val OPPFYLT = "Oppfylt"
+        const val IKKE_OPPFYLT = "IkkeOppfylt"
 
         val ikkeOppfylt =
             SvarPåOppholdskrav(
@@ -283,6 +337,8 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
             )
 
         val ikkeOppfyltIkkeEøsBorger = ikkeOppfylt.copy(eøsBorger = false)
+
+        val VILKÅRSKODER_OPPFYLT = listOf("OPPHOLD_I_NORGE_EØS_ELLER_AVTALELAND")
 
         val VILKÅRSKODER_IKKE_OPPFYLT =
             listOf(
