@@ -2,7 +2,7 @@
 flyway = "13.12.1"
 # Må følge Kotlin-versjonen som no.nav.sykepenger.kotlin-pluginen bruker
 kotlin = "2.4.21"
-kotlinx-serialization-json = "1.12.0"
+kotlinx-serialization-json = "1.13.0"
 tbd-libs = "20261029.1843"
 sykepengerGradlePlugins = "20261029.1945"
 sykepengerLibs = "20261116.0849"
