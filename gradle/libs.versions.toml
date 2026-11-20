@@ -1,5 +1,5 @@
 [versions]
-flyway = "13.12.1"
+flyway = "13.12.2"
 # Må følge Kotlin-versjonen som no.nav.sykepenger.kotlin-pluginen bruker
 kotlin = "2.4.21"
 kotlinx-serialization-json = "1.13.0"
@@ -14,7 +14,7 @@ ktor = "3.6.1"
 [libraries]
 flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
 hikaricp = "com.zaxxer:HikariCP:7.1.0"
-cloud-sql-postgres-socket-factory = "com.google.cloud.sql:postgres-socket-factory:1.30.2"
+cloud-sql-postgres-socket-factory = "com.google.cloud.sql:postgres-socket-factory:1.31.0"
 kotliquery = "com.github.seratch:kotliquery:1.9.1"
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization-json" }
 postgresql = "org.postgresql:postgresql:42.7.14"
