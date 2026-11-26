@@ -30,6 +30,8 @@ spec:
   env:
     - name: TILGANGSMASKINEN_SCOPE
       value: "api://dev-gcp.tilgangsmaskin.populasjonstilgangskontroll/.default"
+    - name: SPEDISJON_SCOPE
+      value: "api://dev-gcp.tbd.spedisjon/.default"
     - name: TILGANG_SKRIV
       value: cda797bb-ac3b-4440-b661-2cd5eb3edba0
     - name: TILGANG_LES

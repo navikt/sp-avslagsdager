@@ -3,6 +3,7 @@ package no.nav.helse.sykepenger.avslagsdager.bootstrap
 import com.github.navikt.tbd_libs.kafka.Config
 import kotliquery.queryOf
 import kotliquery.sessionOf
+import no.nav.helse.sykepenger.avslagsdager.infra.spedisjon.FakeSpedisjon
 import org.apache.kafka.clients.CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG
 import org.apache.kafka.clients.CommonClientConfigs.SECURITY_PROTOCOL_CONFIG
 import org.apache.kafka.clients.admin.AdminClient
@@ -73,6 +74,7 @@ internal class AppTest {
                 kafkaConfig = kafkaConfig,
                 personPseudoIdProvider = FakePersonProvider(),
                 tilgangskontroll = FakeTilgangskontroll(),
+                søknadsoppslag = FakeSpedisjon().søknadsoppslag,
             )
         }
         ventTil("applikasjonen er klar") { statuskode("/isready") == 200 }

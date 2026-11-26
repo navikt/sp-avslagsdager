@@ -20,4 +20,6 @@ private class PostgresTransaksjonskontekst(
 ) : Transaksjonskontekst {
     override val oppholdskravvurderinger = PostgresOppholdskravvurderingRepository(session)
     override val outbox = PostgresOutbox(session)
+    override val oppgittUtlandsopphold = PostgresOppgittUtlandsoppholdRepository(session)
+    override val grunnlagForLøpendeVilkår = PostgresGrunnlagForLøpendeVilkårRepository(session)
 }

@@ -31,12 +31,14 @@ dependencies {
     implementation(libs.tbd.libs.person.pseudo.id)
     implementation(libs.tbd.libs.populasjonstilgangskontroll.provider.api)
     implementation(libs.tbd.libs.populasjonstilgangskontroll.provider.tilgangsmaskinen)
+    implementation(libs.tbd.libs.spedisjon.client)
     implementation(project(":migreringer"))
 
     testImplementation(libs.tbd.libs.mock.http.client)
     testImplementation(libs.tbd.libs.rapids.and.rivers.test)
     testImplementation(libs.testcontainers.kafka)
     testImplementation(testFixtures(libs.sykepengerLibs.postgres))
+    testImplementation(libs.sykepengerLibs.testing)
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.mock.oauth2.server)
 }

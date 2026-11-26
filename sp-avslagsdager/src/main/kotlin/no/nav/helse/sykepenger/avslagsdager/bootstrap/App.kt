@@ -1,6 +1,7 @@
 package no.nav.helse.sykepenger.avslagsdager.bootstrap
 
 import com.github.navikt.tbd_libs.access_token.TexasClient
+import com.github.navikt.tbd_libs.azure.createAzureTokenClientFromEnvironment
 import com.github.navikt.tbd_libs.kafka.AivenConfig
 import com.github.navikt.tbd_libs.kafka.Config
 import com.github.navikt.tbd_libs.kafka.ConsumerProducerFactory
@@ -10,15 +11,18 @@ import com.github.navikt.tbd_libs.populasjonstilgang.api.Populasjonstilgangskont
 import com.github.navikt.tbd_libs.populasjonstilgang.client.PopulasjonstilgangConfig
 import com.github.navikt.tbd_libs.populasjonstilgang.client.tilgangsmaskinenClient
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
+import com.github.navikt.tbd_libs.spedisjon.SpedisjonClient
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationStarted
 import io.ktor.server.application.ApplicationStopped
 import no.nav.helse.rapids_rivers.RapidApplication
+import no.nav.helse.sykepenger.avslagsdager.application.Søknadsoppslag
 import no.nav.helse.sykepenger.avslagsdager.application.Transaksjonskontekst
 import no.nav.helse.sykepenger.avslagsdager.infra.db.PostgresTransaksjonProvider
 import no.nav.helse.sykepenger.avslagsdager.infra.kafka.AvslagsdagerRiver
 import no.nav.helse.sykepenger.avslagsdager.infra.rest.GetSaksbehandlerhandlingVisningBehandler
 import no.nav.helse.sykepenger.avslagsdager.infra.rest.PostOppholdskravvurderingBehandler
+import no.nav.helse.sykepenger.avslagsdager.infra.spedisjon.SpedisjonSøknadsoppslag
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.openapi.OpenApiConfig
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.openapi.configureOpenApiPlugin
 import no.nav.helse.sykepenger.avslagsdager.rammeverk.plugins.configureCallId
@@ -39,6 +43,7 @@ import no.nav.sykepenger.libs.outbox.OutboxPubliseringsjobb
 import no.nav.sykepenger.libs.postgres.DatabaseConfig
 import no.nav.sykepenger.libs.postgres.dataSource
 import no.nav.sykepenger.libs.postgres.migrerSynkront
+import tools.jackson.module.kotlin.jacksonObjectMapper
 
 private const val APP_NAVN = "sp-avslagsdager"
 
@@ -74,6 +79,15 @@ fun main() {
         kafkaConfig = AivenConfig.default,
         personPseudoIdProvider = ValkeyPersonPseudoIdProvider.fraEnv("personpseudoid", env),
         tilgangskontroll = PopulasjonstilgangConfig.fraEnv(env).tilgangsmaskinenClient(TexasClient.fromEnv()),
+        søknadsoppslag =
+            SpedisjonSøknadsoppslag(
+                SpedisjonClient(
+                    objectMapper = jacksonObjectMapper(),
+                    tokenProvider = createAzureTokenClientFromEnvironment(env),
+                    baseUrl = env.getValue("SPEDISJON_BASE_URL"),
+                    scope = env.getValue("SPEDISJON_SCOPE"),
+                ),
+            ),
     )
 }
 
@@ -82,6 +96,7 @@ internal fun launchApplication(
     kafkaConfig: Config,
     personPseudoIdProvider: PersonPseudoIdProvider,
     tilgangskontroll: PopulasjonstilgangskontrollProvider,
+    søknadsoppslag: Søknadsoppslag,
 ) {
     val konfigurasjon = AppKonfigurasjon.fraEnv(APP_NAVN, env)
     logger.info("Migrerer database")
@@ -118,7 +133,7 @@ internal fun launchApplication(
                 )
             register(NaisLeaderElectionStatusListener(leaderElection))
             register(OutboxPubliseringsjobb(dataSource, this, leaderElection))
-            AvslagsdagerRiver(this, transaksjonProvider)
+            AvslagsdagerRiver(this, transaksjonProvider, søknadsoppslag)
         }.start()
 }
 

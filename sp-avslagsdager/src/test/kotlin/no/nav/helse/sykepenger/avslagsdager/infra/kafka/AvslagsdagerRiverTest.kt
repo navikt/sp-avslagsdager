@@ -3,20 +3,27 @@ package no.nav.helse.sykepenger.avslagsdager.infra.kafka
 import com.github.navikt.tbd_libs.rapids_and_rivers.test_support.TestRapid
 import no.nav.helse.sykepenger.avslagsdager.domain.Oppholdskravvurdering
 import no.nav.helse.sykepenger.avslagsdager.domain.OppholdskravvurderingResultat
+import no.nav.helse.sykepenger.avslagsdager.domain.Periode
 import no.nav.helse.sykepenger.avslagsdager.domain.SvarPåOppholdskrav
 import no.nav.helse.sykepenger.avslagsdager.domain.UnntakAndreLedd
 import no.nav.helse.sykepenger.avslagsdager.infra.db.Database
 import no.nav.helse.sykepenger.avslagsdager.infra.db.DatabaseTest
+import no.nav.helse.sykepenger.avslagsdager.infra.spedisjon.FakeSpedisjon
+import no.nav.sykepenger.libs.testing.testdata.lagIdentitetsnummer
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Test
 import tools.jackson.databind.JsonNode
+import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 
 internal class AvslagsdagerRiverTest : DatabaseTest() {
-    private val rapid = TestRapid().apply { AvslagsdagerRiver(this, Database.transaksjonProvider) }
+    private val spedisjon = FakeSpedisjon()
+    private val rapid = TestRapid().apply { AvslagsdagerRiver(this, Database.transaksjonProvider, spedisjon.søknadsoppslag) }
 
     @Test
     fun `en person uten vurderinger i perioden får tomme lister`() {
@@ -51,7 +58,7 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
     }
 
     @Test
-    fun `løsningen har bare vurderteDager`() {
+    fun `løsningen har grunnlagForLøpendeVilkårId, avslagsdager, varsler og vurderteDager`() {
         // Given
         lagre(ikkeOppfylt, dager = listOf(5.jan))
 
@@ -60,7 +67,7 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
 
         // Then
         assertEquals(
-            listOf("vurderteDager"),
+            listOf("grunnlagForLøpendeVilkårId", "avslagsdager", "varsler", "vurderteDager"),
             rapid.inspektør
                 .message(0)
                 .path("@løsning")
@@ -194,13 +201,149 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
     @Test
     fun `vurderinger for en annen person er ikke med`() {
         // Given
-        lagre(ikkeOppfylt, dager = listOf(5.jan), fødselsnummer = "01010112345")
+        lagre(ikkeOppfylt, dager = listOf(5.jan), fødselsnummer = lagIdentitetsnummer())
 
         // When
         rapid.sendTestMessage(behov(fom = 1.jan, tom = 31.jan))
 
         // Then
         assertEquals(Løsning(emptyList()), rapid.inspektør.message(0).løsning())
+    }
+
+    @Test
+    fun `opphold og ferie hos a1 gir varsel hos a2 og a3 som er syke, og grunnlaget lagres`() {
+        // Given
+        val søknadA1 = spedisjon.sendtSøknad(FØDSELSNUMMER, utlandsopphold = listOf(Periode(5.jan, 6.jan)), ferie = listOf(Periode(5.jan, 6.jan)))
+        val søknadA2 = spedisjon.sendtSøknad(FØDSELSNUMMER)
+        val søknadA3 = spedisjon.sendtSøknad(FØDSELSNUMMER)
+
+        // When
+        rapid.sendTestMessage(
+            behov(
+                yrkesaktivitet(A1, sykedager(1.jan, 4.jan) + dager(5.jan, 6.jan, "FERIEDAG"), søknadA1),
+                yrkesaktivitet(A2, sykedager(1.jan, 31.jan), søknadA2),
+                yrkesaktivitet(A3, sykedager(1.jan, 31.jan), søknadA3),
+            ),
+        )
+
+        // Then
+        val løsning =
+            rapid.inspektør
+                .message(0)
+                .path("@løsning")
+                .path("Avslagsdager")
+        assertEquals(listOf(A2, A3), løsning.varsler())
+        assertEquals(emptyList(), løsning.avslagsdager())
+        val grunnlag = checkNotNull(transaksjon { it.grunnlagForLøpendeVilkår.finnSiste(FØDSELSNUMMER, Periode(1.jan, 31.jan)) })
+        assertEquals(UUID.fromString(løsning.path("grunnlagForLøpendeVilkårId").asString()), grunnlag.id.value)
+        assertEquals(listOf(5.jan, 6.jan), grunnlag.innhold.dagerMedOppgittUtlandsopphold.map { it.dato })
+        assertEquals(listOf(5.jan, 6.jan), grunnlag.innhold.dagerTilVurdering.map { it.dato })
+    }
+
+    @Test
+    fun `en dag som allerede er vurdert, gir ikke varsel, men avslagsdag`() {
+        // Given
+        lagre(ikkeOppfylt, dager = listOf(5.jan, 6.jan))
+        val søknad = spedisjon.sendtSøknad(FØDSELSNUMMER, utlandsopphold = listOf(Periode(5.jan, 6.jan)))
+
+        // When
+        rapid.sendTestMessage(behov(yrkesaktivitet(A1, sykedager(1.jan, 31.jan), søknad)))
+
+        // Then
+        val løsning =
+            rapid.inspektør
+                .message(0)
+                .path("@løsning")
+                .path("Avslagsdager")
+        assertEquals(emptyList(), løsning.varsler())
+        assertEquals(
+            listOf(AvslagsdagJson("2026-01-05", VILKÅRSKODER_IKKE_OPPFYLT), AvslagsdagJson("2026-01-06", VILKÅRSKODER_IKKE_OPPFYLT)),
+            løsning.avslagsdager(),
+        )
+    }
+
+    @Test
+    fun `en søknad som allerede er slått opp, hentes ikke på nytt`() {
+        // Given
+        val søknad = spedisjon.sendtSøknad(FØDSELSNUMMER, utlandsopphold = listOf(Periode(5.jan, 6.jan)))
+        rapid.sendTestMessage(behov(yrkesaktivitet(A1, sykedager(1.jan, 31.jan), søknad)))
+
+        // When
+        rapid.sendTestMessage(behov(yrkesaktivitet(A1, sykedager(1.jan, 31.jan), søknad)))
+
+        // Then
+        assertEquals(listOf(søknad.meldingsreferanseId), spedisjon.oppslag)
+        assertEquals(
+            listOf(A1),
+            rapid.inspektør
+                .message(1)
+                .path("@løsning")
+                .path("Avslagsdager")
+                .varsler(),
+        )
+    }
+
+    @Test
+    fun `når Spedisjon ikke svarer, får behovet ikke svar`() {
+        // Given
+        val søknad = spedisjon.sendtSøknad(FØDSELSNUMMER, utlandsopphold = listOf(Periode(5.jan, 6.jan)))
+        spedisjon.feiler()
+
+        // When
+        rapid.sendTestMessage(behov(yrkesaktivitet(A1, sykedager(1.jan, 31.jan), søknad)))
+
+        // Then
+        assertEquals(0, rapid.inspektør.size)
+        assertNull(transaksjon { it.grunnlagForLøpendeVilkår.finnSiste(FØDSELSNUMMER, Periode(1.jan, 31.jan)) })
+    }
+
+    @Test
+    fun `en korrigerende søknad uten opphold fjerner varselet`() {
+        // Given
+        val original = spedisjon.sendtSøknad(FØDSELSNUMMER, utlandsopphold = listOf(Periode(5.jan, 6.jan)))
+        val korrigering = spedisjon.sendtSøknad(FØDSELSNUMMER, korrigerer = original)
+
+        // When
+        rapid.sendTestMessage(behov(yrkesaktivitet(A1, sykedager(1.jan, 31.jan), original, korrigering)))
+
+        // Then
+        assertEquals(
+            emptyList(),
+            rapid.inspektør
+                .message(0)
+                .path("@løsning")
+                .path("Avslagsdager")
+                .varsler(),
+        )
+    }
+
+    @Test
+    fun `samme behov to ganger gir samme grunnlagForLøpendeVilkårId`() {
+        // Given
+        val søknad = spedisjon.sendtSøknad(FØDSELSNUMMER, utlandsopphold = listOf(Periode(5.jan, 6.jan)))
+        val behov = { behov(yrkesaktivitet(A1, sykedager(1.jan, 31.jan), søknad)) }
+
+        // When
+        rapid.sendTestMessage(behov())
+        rapid.sendTestMessage(behov())
+
+        // Then
+        assertEquals(grunnlagForLøpendeVilkårId(0), grunnlagForLøpendeVilkårId(1))
+    }
+
+    @Test
+    fun `en ny vurdering mellom to behov gir ny grunnlagForLøpendeVilkårId`() {
+        // Given
+        val søknad = spedisjon.sendtSøknad(FØDSELSNUMMER, utlandsopphold = listOf(Periode(5.jan, 6.jan)))
+        val behov = { behov(yrkesaktivitet(A1, sykedager(1.jan, 31.jan), søknad)) }
+        rapid.sendTestMessage(behov())
+
+        // When
+        lagre(ikkeOppfylt, dager = listOf(5.jan))
+        rapid.sendTestMessage(behov())
+
+        // Then
+        assertNotEquals(grunnlagForLøpendeVilkårId(0), grunnlagForLøpendeVilkårId(1))
     }
 
     @Test
@@ -267,6 +410,36 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
         return vurdering
     }
 
+    private fun grunnlagForLøpendeVilkårId(indeks: Int) =
+        rapid.inspektør
+            .message(indeks)
+            .path("@løsning")
+            .path("Avslagsdager")
+            .path("grunnlagForLøpendeVilkårId")
+            .asString()
+
+    private fun JsonNode.varsler() =
+        path("varsler").values().map { varsel ->
+            assertEquals("RV_SØ_8", varsel.path("varselkode").asString())
+            assertEquals("ARBEIDSTAKER", varsel.path("yrkesaktivitetstype").asString())
+            varsel.path("organisasjonsnummer").asString()
+        }
+
+    private data class AvslagsdagJson(
+        val dato: String,
+        val vilkårskoder: List<String>,
+        val vilkår: String = "OPPHOLDSKRAV",
+    )
+
+    private fun JsonNode.avslagsdager() =
+        path("avslagsdager").values().map { dag ->
+            AvslagsdagJson(
+                dato = dag.path("dato").asString(),
+                vilkårskoder = dag.path("vilkårskoder").values().map { it.asString() },
+                vilkår = dag.path("vilkår").asString(),
+            )
+        }
+
     private data class Løsning(
         val vurderteDager: List<VurdertDagJson>,
     )
@@ -296,7 +469,7 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
     }
 
     private companion object {
-        const val FØDSELSNUMMER = "12029240045"
+        val FØDSELSNUMMER = lagIdentitetsnummer()
         const val OPPFYLT = "Oppfylt"
         const val IKKE_OPPFYLT = "IkkeOppfylt"
 
@@ -338,6 +511,41 @@ internal class AvslagsdagerRiverTest : DatabaseTest() {
 
         val Int.jan: LocalDate get() = LocalDate.of(2026, 1, this)
         val Int.feb: LocalDate get() = LocalDate.of(2026, 2, this)
+
+        const val A1 = "111111111"
+        const val A2 = "222222222"
+        const val A3 = "333333333"
+
+        val objectMapper = jacksonObjectMapper()
+
+        fun dager(
+            fom: LocalDate,
+            tom: LocalDate,
+            dagtype: String,
+        ) = Periode(fom, tom).dager().map { mapOf("dato" to it.toString(), "dagtype" to dagtype) }
+
+        fun sykedager(
+            fom: LocalDate,
+            tom: LocalDate,
+        ) = dager(fom, tom, "SYKEDAG")
+
+        fun yrkesaktivitet(
+            organisasjonsnummer: String,
+            sykdomstidslinje: List<Map<String, String>>,
+            vararg søknader: FakeSpedisjon.SendtSøknad,
+        ) = mapOf(
+            "yrkesaktivitetstype" to "ARBEIDSTAKER",
+            "organisasjonsnummer" to organisasjonsnummer,
+            "sykdomstidslinje" to sykdomstidslinje,
+            "søknadMeldingsreferanseIder" to søknader.map { it.meldingsreferanseId.toString() },
+        )
+
+        fun behov(vararg yrkesaktiviteter: Map<String, Any>) =
+            behov(
+                objectMapper.writeValueAsString(
+                    mapOf("fom" to 1.jan.toString(), "tom" to 31.jan.toString(), "yrkesaktiviteter" to yrkesaktiviteter.toList()),
+                ),
+            )
 
         fun kl(time: Int): Instant = Instant.parse("2026-01-10T%02d:00:00Z".format(time))
 

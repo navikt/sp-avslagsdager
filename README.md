@@ -1,6 +1,8 @@
 # sp-avslagsdager
 
-Domeneapp for avslagsdager i sykepenger. Appen er foreløpig et skjelett uten domene: den har rapid, database, REST-oppsett for Speil og en klient mot spleis-api.
+Domeneapp for avslagsdager i sykepenger. Saksbehandler vurderer oppholdskravet (folketrygdloven § 8-9) for enkeltdager fra Speil, og appen lagrer vurderingene.
+
+Appen svarer på behovet `Avslagsdager` fra Spleis med avslagsdagene i beregningsperioden og et varsel for hver yrkesaktivitet som har dager der oppholdskravet må vurderes. Den henter søknadene bak behovet fra Spedisjon og lagrer oppholdene utenfor EØS som søknadene oppgir. Hvert svar lagres som et grunnlag for løpende vilkår.
 
 ## REST-API
 
@@ -20,7 +22,7 @@ Bygg og kjør testene:
 
 - `sp-avslagsdager`: selve appen.
 - `migreringer`: Flyway-migreringer for databasen.
-- `opprydding-dev`: svarer på `slett_person` på rapiden i dev. Den sletter ingenting før appen har tabeller med persondata.
+- `opprydding-dev`: svarer på `slett_person` på rapiden i dev og sletter dataene appen har lagret om personen.
 
 ## Henvendelser
 

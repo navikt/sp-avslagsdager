@@ -50,6 +50,8 @@ internal class SlettPersonRiver(
         tx.run(queryOf("DELETE FROM oppholdskravvurdering_dag WHERE vurdering_id IN ($vurderinger)", parametre).asUpdate)
         tx.run(queryOf("DELETE FROM oppholdskravvurdering_vilkarsvurdering WHERE vurdering_id IN ($vurderinger)", parametre).asUpdate)
         tx.run(queryOf("DELETE FROM oppholdskravvurdering WHERE fødselsnummer = :fodselsnummer", parametre).asUpdate)
+        tx.run(queryOf("DELETE FROM oppgitt_utlandsopphold WHERE fødselsnummer = :fodselsnummer", parametre).asUpdate)
+        tx.run(queryOf("DELETE FROM grunnlag_for_lopende_vilkar WHERE fødselsnummer = :fodselsnummer", parametre).asUpdate)
     }
 
     @Language("JSON")

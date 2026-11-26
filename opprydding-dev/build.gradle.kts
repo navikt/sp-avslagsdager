@@ -19,4 +19,5 @@ dependencies {
     testImplementation(libs.tbd.libs.rapids.and.rivers.test)
     testImplementation(libs.testcontainers.postgres)
     testImplementation(libs.flyway.database.postgresql)
+    testImplementation(libs.sykepengerLibs.testing)
 }

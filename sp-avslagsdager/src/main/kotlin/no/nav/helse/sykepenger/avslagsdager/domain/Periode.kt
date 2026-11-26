@@ -11,6 +11,8 @@ internal data class Periode(
     }
 
     operator fun contains(dato: LocalDate) = !dato.isBefore(fom) && !dato.isAfter(tom)
+
+    fun dager(): List<LocalDate> = fom.datesUntil(tom.plusDays(1)).toList()
 }
 
 /** Grupperer dagene til sammenhengende kalenderperioder. Helg og helligdager bryter ikke en periode. */

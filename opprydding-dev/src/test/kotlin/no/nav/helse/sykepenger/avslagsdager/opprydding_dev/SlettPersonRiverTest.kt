@@ -3,6 +3,7 @@ package no.nav.helse.sykepenger.avslagsdager.opprydding_dev
 import com.github.navikt.tbd_libs.rapids_and_rivers.test_support.TestRapid
 import kotliquery.queryOf
 import kotliquery.sessionOf
+import no.nav.sykepenger.libs.testing.testdata.lagIdentitetsnummer
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -32,7 +33,7 @@ internal class SlettPersonRiverTest {
 
     @Test
     fun `publiserer person_slettet etter sletting`() {
-        val fødselsnummer = "01020312345"
+        val fødselsnummer = lagIdentitetsnummer()
 
         rapid.sendTestMessage(slettPersonMelding(fødselsnummer))
 
@@ -46,8 +47,8 @@ internal class SlettPersonRiverTest {
     @Test
     fun `sletter personens oppholdskravvurderinger og lar andre personer være`() {
         // Given
-        val fødselsnummer = "01020312345"
-        val annenPerson = "10203012345"
+        val fødselsnummer = lagIdentitetsnummer()
+        val annenPerson = lagIdentitetsnummer()
         lagreOppholdskravvurdering(fødselsnummer)
         lagreOppholdskravvurdering(annenPerson)
 
@@ -59,6 +60,56 @@ internal class SlettPersonRiverTest {
         assertEquals(1, antallRader("oppholdskravvurdering_dag"))
         assertEquals(1, antallRader("oppholdskravvurdering_vilkarsvurdering"))
         assertEquals(1, antallRader("oppholdskravvurdering", annenPerson))
+    }
+
+    @Test
+    fun `sletter personens oppgitte utlandsopphold og grunnlag for løpende vilkår og lar andre personer være`() {
+        // Given
+        val fødselsnummer = lagIdentitetsnummer()
+        val annenPerson = lagIdentitetsnummer()
+        listOf(fødselsnummer, annenPerson).forEach {
+            lagreOppgittUtlandsopphold(it)
+            lagreGrunnlag(it)
+        }
+
+        // When
+        rapid.sendTestMessage(slettPersonMelding(fødselsnummer))
+
+        // Then
+        assertEquals(1, antallRader("oppgitt_utlandsopphold"))
+        assertEquals(1, antallRader("oppgitt_utlandsopphold", annenPerson))
+        assertEquals(1, antallRader("grunnlag_for_lopende_vilkar"))
+        assertEquals(1, antallRader("grunnlag_for_lopende_vilkar", annenPerson))
+    }
+
+    private fun lagreOppgittUtlandsopphold(fødselsnummer: String) {
+        sessionOf(Database.dataSource).use { session ->
+            session.run(
+                queryOf(
+                    """
+                    INSERT INTO oppgitt_utlandsopphold (
+                        meldingsreferanse_id, soknad_id, fødselsnummer, yrkesaktivitetstype, utlandsoppholdsperioder, hentet_tidspunkt
+                    )
+                    VALUES (?, ?, ?, 'ARBEIDSTAKER', '[]', now())
+                    """.trimIndent(),
+                    UUID.randomUUID(),
+                    UUID.randomUUID(),
+                    fødselsnummer,
+                ).asUpdate,
+            )
+        }
+    }
+
+    private fun lagreGrunnlag(fødselsnummer: String) {
+        sessionOf(Database.dataSource).use { session ->
+            session.run(
+                queryOf(
+                    "INSERT INTO grunnlag_for_lopende_vilkar (id, fødselsnummer, fom, tom, grunnlag) VALUES (?, ?, '2026-01-01', '2026-01-31', '{}')",
+                    UUID.randomUUID(),
+                    fødselsnummer,
+                ).asUpdate,
+            )
+        }
     }
 
     private fun lagreOppholdskravvurdering(fødselsnummer: String) {

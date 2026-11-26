@@ -14,6 +14,8 @@ internal object Database {
             "oppholdskravvurdering_dag",
             "oppholdskravvurdering",
             "outbox",
+            "oppgitt_utlandsopphold",
+            "grunnlag_for_lopende_vilkar",
         )
 
     fun antallRader(tabell: String) = database.antallRader(tabell)
