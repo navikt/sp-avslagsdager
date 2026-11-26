@@ -4,13 +4,13 @@ import no.nav.helse.sykepenger.avslagsdager.domain.Avslagsdagerbehov
 import no.nav.helse.sykepenger.avslagsdager.domain.Dagtype
 import no.nav.helse.sykepenger.avslagsdager.domain.GrunnlagForLøpendeVilkår
 import no.nav.helse.sykepenger.avslagsdager.domain.MeldingsreferanseId
+import no.nav.helse.sykepenger.avslagsdager.domain.OppgittUtlandsopphold
 import no.nav.helse.sykepenger.avslagsdager.domain.Oppholdskravvurdering
 import no.nav.helse.sykepenger.avslagsdager.domain.OppholdskravvurderingResultat
 import no.nav.helse.sykepenger.avslagsdager.domain.Periode
 import no.nav.helse.sykepenger.avslagsdager.domain.SvarPåOppholdskrav
 import no.nav.helse.sykepenger.avslagsdager.domain.Sykdomsdag
 import no.nav.helse.sykepenger.avslagsdager.domain.SøknadId
-import no.nav.helse.sykepenger.avslagsdager.domain.OppgittUtlandsopphold
 import no.nav.helse.sykepenger.avslagsdager.domain.UnntakAndreLedd
 import no.nav.helse.sykepenger.avslagsdager.domain.Yrkesaktivitet
 import no.nav.helse.sykepenger.avslagsdager.domain.YrkesaktivitetIBehov

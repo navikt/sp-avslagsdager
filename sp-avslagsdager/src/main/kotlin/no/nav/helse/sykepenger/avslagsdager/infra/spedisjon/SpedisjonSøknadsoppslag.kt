@@ -5,9 +5,9 @@ import com.github.navikt.tbd_libs.spedisjon.SpedisjonClient
 import no.nav.helse.sykepenger.avslagsdager.application.SøknadenKunneIkkeHentes
 import no.nav.helse.sykepenger.avslagsdager.application.Søknadsoppslag
 import no.nav.helse.sykepenger.avslagsdager.domain.MeldingsreferanseId
+import no.nav.helse.sykepenger.avslagsdager.domain.OppgittUtlandsopphold
 import no.nav.helse.sykepenger.avslagsdager.domain.Periode
 import no.nav.helse.sykepenger.avslagsdager.domain.SøknadId
-import no.nav.helse.sykepenger.avslagsdager.domain.OppgittUtlandsopphold
 import no.nav.helse.sykepenger.avslagsdager.domain.Yrkesaktivitet
 import tools.jackson.databind.JsonNode
 import tools.jackson.module.kotlin.jacksonObjectMapper

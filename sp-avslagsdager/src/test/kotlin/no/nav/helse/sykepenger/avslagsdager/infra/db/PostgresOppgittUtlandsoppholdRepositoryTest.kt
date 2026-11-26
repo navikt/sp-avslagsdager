@@ -1,9 +1,9 @@
 package no.nav.helse.sykepenger.avslagsdager.infra.db
 
 import no.nav.helse.sykepenger.avslagsdager.domain.MeldingsreferanseId
+import no.nav.helse.sykepenger.avslagsdager.domain.OppgittUtlandsopphold
 import no.nav.helse.sykepenger.avslagsdager.domain.Periode
 import no.nav.helse.sykepenger.avslagsdager.domain.SøknadId
-import no.nav.helse.sykepenger.avslagsdager.domain.OppgittUtlandsopphold
 import no.nav.helse.sykepenger.avslagsdager.domain.Yrkesaktivitet
 import no.nav.sykepenger.libs.testing.testdata.lagIdentitetsnummer
 import org.junit.jupiter.api.Test

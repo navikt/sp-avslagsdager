@@ -5,9 +5,9 @@ import kotliquery.Session
 import kotliquery.queryOf
 import no.nav.helse.sykepenger.avslagsdager.application.OppgittUtlandsoppholdRepository
 import no.nav.helse.sykepenger.avslagsdager.domain.MeldingsreferanseId
+import no.nav.helse.sykepenger.avslagsdager.domain.OppgittUtlandsopphold
 import no.nav.helse.sykepenger.avslagsdager.domain.Periode
 import no.nav.helse.sykepenger.avslagsdager.domain.SøknadId
-import no.nav.helse.sykepenger.avslagsdager.domain.OppgittUtlandsopphold
 import no.nav.helse.sykepenger.avslagsdager.domain.Yrkesaktivitet
 import org.intellij.lang.annotations.Language
 import tools.jackson.module.kotlin.jacksonObjectMapper
