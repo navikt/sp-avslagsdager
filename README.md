@@ -2,7 +2,7 @@
 
 Domeneapp for avslagsdager i sykepenger. Saksbehandler vurderer oppholdskravet (folketrygdloven § 8-9) for enkeltdager fra Speil, og appen lagrer vurderingene.
 
-Appen svarer på behovet `Avslagsdager` fra Spleis med avslagsdagene i beregningsperioden og et varsel for hver yrkesaktivitet som har dager der oppholdskravet må vurderes. Den henter søknadene bak behovet fra Spedisjon og lagrer oppholdene utenfor EØS som søknadene oppgir. Hvert svar lagres som et grunnlag for løpende vilkår.
+Appen svarer på behovet `Avslagsdager` fra Spleis med avslagsdagene i beregningsperioden og et varsel for hver yrkesaktivitet som har dager der oppholdskravet må vurderes. Den henter søknadene bak behovet fra Spedisjon og lagrer oppholdene utenfor EØS som søknadene oppgir. Hvert svar lagres som et grunnlag for løpende vilkår. Spesialist og Speil henter grunnlaget med ID-en fra Spleis, for å sperre godkjenning og vise dagene i dagoversikten.
 
 ## REST-API
 

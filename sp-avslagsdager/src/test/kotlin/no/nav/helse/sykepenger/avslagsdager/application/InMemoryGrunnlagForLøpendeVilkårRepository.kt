@@ -1,6 +1,7 @@
 package no.nav.helse.sykepenger.avslagsdager.application
 
 import no.nav.helse.sykepenger.avslagsdager.domain.GrunnlagForLøpendeVilkår
+import no.nav.helse.sykepenger.avslagsdager.domain.GrunnlagForLøpendeVilkårId
 import no.nav.helse.sykepenger.avslagsdager.domain.Periode
 
 internal class InMemoryGrunnlagForLøpendeVilkårRepository : GrunnlagForLøpendeVilkårRepository {
@@ -10,6 +11,8 @@ internal class InMemoryGrunnlagForLøpendeVilkårRepository : GrunnlagForLøpend
         check(this.grunnlag.none { it.id == grunnlag.id }) { "Grunnlaget ${grunnlag.id} er allerede lagret" }
         this.grunnlag.add(grunnlag)
     }
+
+    override fun finnOrNull(id: GrunnlagForLøpendeVilkårId) = grunnlag.firstOrNull { it.id == id }
 
     override fun finnSiste(
         fødselsnummer: String,

@@ -67,6 +67,18 @@ class OppholdskravvurderingOpenApiTest {
                     "Forventet diskriminatoren type i skjemaet $skjema: ${spec["components"]["schemas"][skjema]}"
                 }
             }
+
+            assertTrue(spec["paths"].has("/api/personer/{personId}/avslagsdager/{grunnlagForLøpendeVilkårId}")) {
+                "Forventet at grunnlaget for løpende vilkår var dokumentert: $spec"
+            }
+            val grunnlag = spec["components"]["schemas"]["ApiGrunnlagForLøpendeVilkårResponse"]["properties"]
+            listOf(
+                "grunnlagForLøpendeVilkårId",
+                "periode",
+                "dagerMedOppgittUtlandsopphold",
+                "dagerTilVurdering",
+                "vurderteDager",
+            ).forEach { felt -> assertTrue(grunnlag.has(felt)) { "Forventet feltet $felt i grunnlaget: $grunnlag" } }
         }
 
     private fun Application.settOppTestapp() {
@@ -98,6 +110,7 @@ class OppholdskravvurderingOpenApiTest {
         routing {
             post(PostOppholdskravvurderingBehandler(aktivert = true), restAdapter)
             get(GetSaksbehandlerhandlingVisningBehandler(aktivert = true), restAdapter)
+            get(GetGrunnlagForLøpendeVilkårBehandler(aktivert = true), restAdapter)
         }
     }
 }

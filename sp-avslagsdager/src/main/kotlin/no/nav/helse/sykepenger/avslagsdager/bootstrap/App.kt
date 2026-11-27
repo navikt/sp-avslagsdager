@@ -20,6 +20,7 @@ import no.nav.helse.sykepenger.avslagsdager.application.Søknadsoppslag
 import no.nav.helse.sykepenger.avslagsdager.application.Transaksjonskontekst
 import no.nav.helse.sykepenger.avslagsdager.infra.db.PostgresTransaksjonProvider
 import no.nav.helse.sykepenger.avslagsdager.infra.kafka.AvslagsdagerRiver
+import no.nav.helse.sykepenger.avslagsdager.infra.rest.GetGrunnlagForLøpendeVilkårBehandler
 import no.nav.helse.sykepenger.avslagsdager.infra.rest.GetSaksbehandlerhandlingVisningBehandler
 import no.nav.helse.sykepenger.avslagsdager.infra.rest.PostOppholdskravvurderingBehandler
 import no.nav.helse.sykepenger.avslagsdager.infra.spedisjon.SpedisjonSøknadsoppslag
@@ -161,6 +162,7 @@ internal fun endepunkter(oppholdskravvurderingAktivert: Boolean): RestRuting<Tra
     {
         post(PostOppholdskravvurderingBehandler(aktivert = oppholdskravvurderingAktivert))
         get(GetSaksbehandlerhandlingVisningBehandler(aktivert = oppholdskravvurderingAktivert))
+        get(GetGrunnlagForLøpendeVilkårBehandler(aktivert = oppholdskravvurderingAktivert))
     }
 
 // Bare i dev inntil avslag etter oppholdskravet er klart for prod. Ukjent miljø gir av. Endepunktene finnes i alle

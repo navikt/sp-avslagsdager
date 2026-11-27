@@ -40,10 +40,12 @@ class EndepunkterTest {
             // When
             val vurdering = client.post(url())
             val visning = client.get(visningUrl())
+            val grunnlag = client.get(grunnlagUrl())
 
             // Then
             assertEquals(HttpStatusCode.Unauthorized, vurdering.status)
             assertEquals(HttpStatusCode.Unauthorized, visning.status)
+            assertEquals(HttpStatusCode.Unauthorized, grunnlag.status)
         }
 
     @Test
@@ -55,10 +57,12 @@ class EndepunkterTest {
             // When
             val vurdering = client.post(url())
             val visning = client.get(visningUrl())
+            val grunnlag = client.get(grunnlagUrl())
 
             // Then
             assertEquals(HttpStatusCode.Unauthorized, vurdering.status)
             assertEquals(HttpStatusCode.Unauthorized, visning.status)
+            assertEquals(HttpStatusCode.Unauthorized, grunnlag.status)
         }
 
     private fun Application.settOpp(oppholdskravvurderingAktivert: Boolean) {
@@ -86,6 +90,8 @@ class EndepunkterTest {
     private fun url() = "/api/personer/${UUID.randomUUID()}/vurderinger/oppholdskrav"
 
     private fun visningUrl() = "/api/personer/${UUID.randomUUID()}/saksbehandlerhandlinger/${UUID.randomUUID()}/visning"
+
+    private fun grunnlagUrl() = "/api/personer/${UUID.randomUUID()}/avslagsdager/${UUID.randomUUID()}"
 
     private object ÅpenTilgangskontroll : PopulasjonstilgangskontrollProvider {
         override fun kontrollerKomplettTilgang(

@@ -62,6 +62,7 @@ spec:
     inbound:
       rules:
         - application: speil
+        - application: spesialist
     outbound:
       rules:
         - application: logging

@@ -1,10 +1,13 @@
 package no.nav.helse.sykepenger.avslagsdager.application
 
 import no.nav.helse.sykepenger.avslagsdager.domain.GrunnlagForLøpendeVilkår
+import no.nav.helse.sykepenger.avslagsdager.domain.GrunnlagForLøpendeVilkårId
 import no.nav.helse.sykepenger.avslagsdager.domain.Periode
 
 internal interface GrunnlagForLøpendeVilkårRepository {
     fun lagre(grunnlag: GrunnlagForLøpendeVilkår)
+
+    fun finnOrNull(id: GrunnlagForLøpendeVilkårId): GrunnlagForLøpendeVilkår?
 
     /** Det sist lagrede grunnlaget for personen og nøyaktig denne beregningsperioden. */
     fun finnSiste(

@@ -3,6 +3,7 @@ package no.nav.helse.sykepenger.avslagsdager.infra.db
 import no.nav.helse.sykepenger.avslagsdager.domain.Avslagsdagerbehov
 import no.nav.helse.sykepenger.avslagsdager.domain.Dagtype
 import no.nav.helse.sykepenger.avslagsdager.domain.GrunnlagForLøpendeVilkår
+import no.nav.helse.sykepenger.avslagsdager.domain.GrunnlagForLøpendeVilkårId
 import no.nav.helse.sykepenger.avslagsdager.domain.MeldingsreferanseId
 import no.nav.helse.sykepenger.avslagsdager.domain.OppgittUtlandsopphold
 import no.nav.helse.sykepenger.avslagsdager.domain.Oppholdskravvurdering
@@ -53,6 +54,26 @@ internal class PostgresGrunnlagForLøpendeVilkårRepositoryTest : DatabaseTest()
 
         // Then
         assertEquals(siste.id, hentet?.id)
+    }
+
+    @Test
+    fun `finner et grunnlag med ID-en`() {
+        // Given
+        val grunnlag = lagGrunnlag()
+        val annet = lagGrunnlag()
+        listOf(grunnlag, annet).forEach { lagret -> transaksjon { it.grunnlagForLøpendeVilkår.lagre(lagret) } }
+
+        // When
+        val hentet = transaksjon { it.grunnlagForLøpendeVilkår.finnOrNull(grunnlag.id) }
+
+        // Then
+        assertEquals(grunnlag.id, hentet?.id)
+        assertEquals(grunnlag.innhold, hentet?.innhold)
+    }
+
+    @Test
+    fun `ukjent ID gir ikke noe grunnlag`() {
+        assertNull(transaksjon { it.grunnlagForLøpendeVilkår.finnOrNull(GrunnlagForLøpendeVilkårId.ny()) })
     }
 
     @Test

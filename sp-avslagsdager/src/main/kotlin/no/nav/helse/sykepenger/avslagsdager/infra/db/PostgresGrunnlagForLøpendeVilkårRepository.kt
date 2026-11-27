@@ -1,5 +1,6 @@
 package no.nav.helse.sykepenger.avslagsdager.infra.db
 
+import kotliquery.Row
 import kotliquery.Session
 import kotliquery.queryOf
 import no.nav.helse.sykepenger.avslagsdager.application.GrunnlagForLøpendeVilkårRepository
@@ -48,18 +49,22 @@ internal class PostgresGrunnlagForLøpendeVilkårRepository(
         )
     }
 
+    override fun finnOrNull(id: GrunnlagForLøpendeVilkårId): GrunnlagForLøpendeVilkår? = session.run(queryOf(SELECT_MED_ID, mapOf("id" to id.value)).map(::tilGrunnlag).asSingle)
+
     override fun finnSiste(
         fødselsnummer: String,
         periode: Periode,
     ): GrunnlagForLøpendeVilkår? =
         session.run(
             queryOf(SELECT_SISTE, mapOf("fodselsnummer" to fødselsnummer, "fom" to periode.fom, "tom" to periode.tom))
-                .map { row ->
-                    GrunnlagForLøpendeVilkår.fraLagring(
-                        id = GrunnlagForLøpendeVilkårId(row.uuid("id")),
-                        innhold = objectMapper.readValue<GrunnlagsinnholdDto>(row.string("grunnlag")).tilDomene(),
-                    )
-                }.asSingle,
+                .map(::tilGrunnlag)
+                .asSingle,
+        )
+
+    private fun tilGrunnlag(row: Row) =
+        GrunnlagForLøpendeVilkår.fraLagring(
+            id = GrunnlagForLøpendeVilkårId(row.uuid("id")),
+            innhold = objectMapper.readValue<GrunnlagsinnholdDto>(row.string("grunnlag")).tilDomene(),
         )
 
     private companion object {
@@ -69,6 +74,13 @@ internal class PostgresGrunnlagForLøpendeVilkårRepository(
         const val INSERT = """
             insert into grunnlag_for_lopende_vilkar (id, fødselsnummer, fom, tom, grunnlag)
             values (:id, :fodselsnummer, :fom, :tom, cast(:grunnlag as jsonb))
+        """
+
+        @Language("PostgreSQL")
+        const val SELECT_MED_ID = """
+            select id, grunnlag
+            from grunnlag_for_lopende_vilkar
+            where id = :id
         """
 
         @Language("PostgreSQL")
