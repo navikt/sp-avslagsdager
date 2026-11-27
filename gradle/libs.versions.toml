@@ -1,5 +1,5 @@
 [versions]
-flyway = "13.12.2"
+flyway = "13.13.0"
 # Må følge Kotlin-versjonen som no.nav.sykepenger.kotlin-pluginen bruker
 kotlin = "2.4.21"
 kotlinx-serialization-json = "1.13.0"
@@ -18,7 +18,7 @@ cloud-sql-postgres-socket-factory = "com.google.cloud.sql:postgres-socket-factor
 kotliquery = "com.github.seratch:kotliquery:1.9.1"
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization-json" }
 postgresql = "org.postgresql:postgresql:42.7.14"
-rapids-and-rivers = "com.github.navikt:rapids-and-rivers:2026110308421793691732"
+rapids-and-rivers = "com.github.navikt:rapids-and-rivers:2026111908531795074794"
 sykepengerLibs-ktor-auth = { module = "no.nav.sykepenger.libs:ktor-auth", version.ref = "sykepengerLibs" }
 sykepengerLibs-logging = { module = "no.nav.sykepenger.libs:logging", version.ref = "sykepengerLibs" }
 sykepengerLibs-postgres = { module = "no.nav.sykepenger.libs:postgres", version.ref = "sykepengerLibs" }
